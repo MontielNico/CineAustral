@@ -21,4 +21,7 @@ public class Pelicula {
     @Column(nullable = false)
     private int duracionMinutos;
     private Double puntuacion;
+
+    @Column()
+    private String imagenUrl;
 }

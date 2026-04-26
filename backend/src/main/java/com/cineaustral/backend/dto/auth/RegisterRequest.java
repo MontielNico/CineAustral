@@ -1,4 +1,4 @@
-package com.cineaustral.backend.dto;
+package com.cineaustral.backend.dto.auth;
 
 import lombok.Data;
 

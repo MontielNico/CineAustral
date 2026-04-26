@@ -1,7 +1,7 @@
 package com.cineaustral.backend.controller;
 
-import com.cineaustral.backend.dto.RegisterRequest;
-import com.cineaustral.backend.dto.UsuarioResponse;
+import com.cineaustral.backend.dto.auth.RegisterRequest;
+import com.cineaustral.backend.dto.auth.UsuarioResponse;
 import com.cineaustral.backend.entity.Usuario;
 import com.cineaustral.backend.service.AuthService;
 import lombok.RequiredArgsConstructor;
