@@ -2,12 +2,18 @@ package com.cineaustral.backend.entity;
 
 import com.cineaustral.backend.enums.SalaEstado;
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "salas")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class Sala {
 
     @Id
