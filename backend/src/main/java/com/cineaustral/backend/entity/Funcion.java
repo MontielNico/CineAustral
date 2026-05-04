@@ -3,6 +3,7 @@ package com.cineaustral.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,6 +21,9 @@ public class Funcion {
     @Column(nullable = false)
     private int duracionMinutos;
 
+    @Column(nullable = false)
+    private BigDecimal precioPorAsiento;
+
     @Transient
     public LocalDateTime getFechaHoraFin() {
         return fechaHoraInicio.plusMinutes(duracionMinutos);
@@ -32,4 +36,5 @@ public class Funcion {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sala_id", nullable = false)
     private Sala sala;
+
 }

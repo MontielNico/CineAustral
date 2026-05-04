@@ -66,7 +66,7 @@ public class DataSeeder implements CommandLineRunner {
         return Asiento.builder()
                 .fila(fila)
                 .numero(numero)
-                .asientoEstado(AsientoEstado.LIBRE)
+                .asientoEstado(AsientoEstado.DISPONIBLE)
                 .sala(sala)
                 .build();
     }

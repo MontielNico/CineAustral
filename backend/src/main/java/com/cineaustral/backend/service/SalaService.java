@@ -6,9 +6,7 @@ import com.cineaustral.backend.dto.sala.SalaResponse;
 import com.cineaustral.backend.entity.Sala;
 import com.cineaustral.backend.enums.SalaEstado;
 import com.cineaustral.backend.repository.SalaRepository;
-import jakarta.persistence.Id;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,7 +23,7 @@ public class SalaService {
                 .toList();
     }
 
-    public SalaResponse cambiarEstado(Integer id, SalaEstadoRequest request){
+    public SalaResponse cambiarEstado(Long id, SalaEstadoRequest request){
         Sala sala = salaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Sala no encontrado"));
         sala.setEstado(SalaEstado.valueOf(request.getEstado()));

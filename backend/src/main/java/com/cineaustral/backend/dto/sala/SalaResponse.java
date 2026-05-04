@@ -9,7 +9,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class SalaResponse {
-    private int id;
+    private Long id;
     private String nombre;
     private String estado;
     private List<AsientoResponse> asientos;

@@ -14,14 +14,14 @@ public class Asiento {
     private Long id;
 
     @Column(nullable = false)
-    private String fila;
+    private String fila; //A,B,C,D,E,F
 
     @Column(nullable = false)
-    private int numero;
+    private int numero; //1-15
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AsientoEstado asientoEstado;
+    private AsientoEstado asientoEstado; // DISPONIBLE, MANTENIMIENTO
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sala_id", nullable = false)

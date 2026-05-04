@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/admin/asientos")
 public class AsientoController {
-    
+
     private final AsientoService asientoService;
 
     @PutMapping("/{id}/estado")

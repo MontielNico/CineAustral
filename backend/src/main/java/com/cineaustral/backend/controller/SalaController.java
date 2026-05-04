@@ -22,7 +22,7 @@ public class SalaController {
     }
 
     @PutMapping("/{id}/estado")
-    public ResponseEntity<SalaResponse> cambiarEstado(@PathVariable Integer id, @RequestBody SalaEstadoRequest estado) {
+    public ResponseEntity<SalaResponse> cambiarEstado(@PathVariable Long id, @RequestBody SalaEstadoRequest estado) {
         return ResponseEntity.ok(salaService.cambiarEstado(id, estado));
     }
 
