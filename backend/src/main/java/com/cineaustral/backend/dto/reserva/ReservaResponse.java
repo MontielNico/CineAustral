@@ -19,5 +19,13 @@ public class ReservaResponse {
     private BigDecimal precioTotal;
     private String reservaEstado;
     private List<DetalleReservaResponse> asientos;
-    private String nombreCliente;
+    private String clienteNombre;
+    private String clienteApellido;
+    private String clienteEmail;
+    private Long funcionId;
+    private Long peliculaId;
+    private String peliculaTitulo;
+    private LocalDateTime fechaHoraInicio;
+    private LocalDateTime fechaHoraFin;
+    private String salaNombre;
 }

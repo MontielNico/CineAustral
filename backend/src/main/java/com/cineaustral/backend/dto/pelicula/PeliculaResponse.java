@@ -13,4 +13,5 @@ public class PeliculaResponse {
     private int duracionMinutos;
     private Double puntuacion;
     private String imagenUrl;
+    private boolean enCartelera;
 }

@@ -9,4 +9,5 @@ public class PeliculaRequest {
     private String sinopsis;
     private int duracionMinutos;
     private Double puntuacion;
+    private Boolean enCartelera;
 }

@@ -34,4 +34,19 @@ public class AuthService {
     public UsuarioResponse me(Usuario usuario) {
         return  new UsuarioResponse(usuario.getId(), usuario.getNombre(), usuario.getApellido(), usuario.getEmail(), usuario.getRol().name());
     }
+
+    public java.util.List<UsuarioResponse> listarUsuarios() {
+        return usuarioRepository.findAll().stream()
+                .map(u -> new UsuarioResponse(u.getId(), u.getNombre(), u.getApellido(), u.getEmail(), u.getRol().name()))
+                .toList();
+    }
+
+    public UsuarioResponse cambiarRol(Long id, com.cineaustral.backend.enums.UsuarioRol rol) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        usuario.setRol(rol);
+        usuarioRepository.save(usuario);
+        return new UsuarioResponse(usuario.getId(), usuario.getNombre(), usuario.getApellido(), usuario.getEmail(), usuario.getRol().name());
+    }
 }
+

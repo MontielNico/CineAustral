@@ -38,7 +38,7 @@ public class PeliculaController {
     public ResponseEntity<PeliculaResponse> actualizarPelicula(
             @PathVariable Long id,
             @RequestPart("pelicula") PeliculaRequest request,
-            @RequestPart("imagen")  MultipartFile imagen) throws IOException {
+            @RequestPart(value = "imagen", required = false) MultipartFile imagen) throws IOException {
         return ResponseEntity.ok(peliculaService.actualizarPelicula(id, request, imagen));
     }
 

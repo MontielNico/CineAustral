@@ -24,4 +24,8 @@ public class Pelicula {
 
     @Column()
     private String imagenUrl;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean enCartelera = true;
 }

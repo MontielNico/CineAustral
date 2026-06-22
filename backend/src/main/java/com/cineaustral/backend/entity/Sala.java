@@ -28,5 +28,6 @@ public class Sala {
     private SalaEstado estado;
 
     @OneToMany(mappedBy = "sala", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<Asiento> asientos = new ArrayList<>();
 }

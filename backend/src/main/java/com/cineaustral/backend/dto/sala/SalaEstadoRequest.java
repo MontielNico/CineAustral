@@ -5,4 +5,5 @@ import lombok.Data;
 @Data
 public class SalaEstadoRequest {
     private String estado;
+    private String fechaFinMantenimiento;
 }

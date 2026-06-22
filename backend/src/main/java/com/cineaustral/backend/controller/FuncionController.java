@@ -30,4 +30,11 @@ public class FuncionController {
     public ResponseEntity<FuncionResponse> registrrarFuncion(@RequestBody FuncionRequest request) {
         return ResponseEntity.ok(funcionService.registrarFuncion(request));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarFuncion(@PathVariable Long id) {
+        funcionService.eliminarFuncion(id);
+        return ResponseEntity.noContent().build();
+    }
 }
+

@@ -26,7 +26,7 @@ public class Reserva {
     @Enumerated(EnumType.STRING)
     private ReservaEstado reservaEstado; //ACTIVA, CANCELADA
 
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "reserva")
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "reserva", orphanRemoval = true)
     private List<DetalleReserva> detalles;
 
     @ManyToOne(fetch = FetchType.LAZY)

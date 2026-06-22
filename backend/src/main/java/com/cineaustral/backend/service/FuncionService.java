@@ -28,6 +28,12 @@ public class FuncionService {
                 .toList();
     }
 
+    public List<FuncionResponse> listarFuncionesFuturasPorPelicula(Long peliculaId) {
+        return funcionRepository.findByPeliculaIdAndFechaHoraInicioAfter(peliculaId, LocalDateTime.now()).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public FuncionResponse obtenerFuncion(Long id){
         return toResponse(funcionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Funcion no encontrada")));
@@ -36,6 +42,10 @@ public class FuncionService {
     public FuncionResponse registrarFuncion(FuncionRequest request){
         Pelicula pelicula = peliculaRepository.findById(request.getPeliculaId())
                 .orElseThrow(() -> new RuntimeException("Pelicula no encontrada"));
+
+        if (!pelicula.isEnCartelera()) {
+            throw new RuntimeException("La película no se encuentra en cartelera");
+        }
 
         Sala sala = salaRepository.findById(request.getSalaId())
                 .orElseThrow(() -> new RuntimeException("Sala no encontrada"));

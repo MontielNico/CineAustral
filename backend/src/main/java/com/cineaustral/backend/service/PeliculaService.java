@@ -41,6 +41,7 @@ public class PeliculaService {
                 .duracionMinutos(request.getDuracionMinutos())
                 .puntuacion(request.getPuntuacion())
                 .imagenUrl(imagenUrl)
+                .enCartelera(request.getEnCartelera() != null ? request.getEnCartelera() : true)
                 .build();
         return toResponse(peliculaRepository.save(pelicula));
     }
@@ -54,6 +55,9 @@ public class PeliculaService {
         pelicula.setSinopsis(request.getSinopsis());
         pelicula.setDuracionMinutos(request.getDuracionMinutos());
         pelicula.setPuntuacion(request.getPuntuacion());
+        if (request.getEnCartelera() != null) {
+            pelicula.setEnCartelera(request.getEnCartelera());
+        }
         if(imagen != null && !imagen.isEmpty()) {
             imagenService.eliminar(pelicula.getImagenUrl());
             pelicula.setImagenUrl(imagenService.guardar(imagen));
@@ -74,7 +78,8 @@ public class PeliculaService {
                 pelicula.getSinopsis(),
                 pelicula.getDuracionMinutos(),
                 pelicula.getPuntuacion(),
-                pelicula.getImagenUrl()
+                pelicula.getImagenUrl(),
+                pelicula.isEnCartelera()
         );
     }
 }

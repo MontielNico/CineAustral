@@ -17,4 +17,6 @@ public interface FuncionRepository extends JpaRepository<Funcion, Long> {
             Sala sala,
             LocalDateTime desde,
             LocalDateTime hasta);
+
+    List<Funcion> findByPeliculaIdAndFechaHoraInicioAfter(Long peliculaId, LocalDateTime desde);
 }
