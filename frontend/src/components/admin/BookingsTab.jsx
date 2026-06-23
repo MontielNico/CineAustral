@@ -26,7 +26,7 @@ const BookingsTab = ({
     // Calculate revenue stats locally
     const getIngresosConfirmados = () => {
         return reservas
-            .filter(r => r.estado === "CONFIRMADA")
+            .filter(r => r.estado === "CONFIRMADA" || r.estado === "MODIFICADA")
             .reduce((sum, r) => sum + r.precioTotal, 0);
     };
 
@@ -145,8 +145,7 @@ const BookingsTab = ({
                                     </td>
                                     <td className="p-3.5 text-right font-black text-carbon">${r.precioTotal.toFixed(2)}</td>
                                     <td className="p-3.5 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black border uppercase tracking-wider ${
-                                            r.estado === "CONFIRMADA"
+                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black border uppercase tracking-wider ${r.estado === "CONFIRMADA"
                                                 ? "bg-estepa/10 text-estepa border-estepa/25"
                                                 : r.estado === "MODIFICADA"
                                                     ? "bg-cielo/10 text-cielo border-cielo/25"
