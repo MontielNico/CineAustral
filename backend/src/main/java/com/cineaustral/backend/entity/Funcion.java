@@ -1,5 +1,6 @@
 package com.cineaustral.backend.entity;
 
+import com.cineaustral.backend.enums.FuncionEstado;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,6 +15,11 @@ public class Funcion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private FuncionEstado estado = FuncionEstado.ACTIVA;
 
     @Column(nullable = false)
     private LocalDateTime fechaHoraInicio;

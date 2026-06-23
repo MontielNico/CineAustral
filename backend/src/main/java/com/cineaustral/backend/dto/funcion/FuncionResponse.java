@@ -15,4 +15,5 @@ public class FuncionResponse {
     private String fechaHoraFin;
     private int duracionMinutos;
     private BigDecimal precioPorAsiento;
+    private String estado;
 }

@@ -29,12 +29,9 @@ const RoomsTab = ({
             }
             fetchSalas();
         } catch (err) {
-            console.warn("API toggle room status failed, simulating locally:", err);
-            setSalas(prev => prev.map(s => s.id === salaId ? { ...s, estado: nuevoEstado } : s));
-            if (selectedSala?.id === salaId) {
-                setSelectedSala(prev => ({ ...prev, estado: nuevoEstado }));
-            }
-            showNotification(`Sala cambiada a ${nuevoEstado === "DISPONIBLE" ? "Habilitada" : "Inhabilitada"} (Simulado)`);
+            console.error("Error al cambiar estado de sala:", err);
+            const msg = err.response?.data?.message || "No se pudo actualizar el estado de la sala.";
+            showNotification(msg, "error");
         }
     };
 
@@ -50,21 +47,9 @@ const RoomsTab = ({
             }
             fetchSalas();
         } catch (err) {
-            console.warn("API toggle seat status failed, simulating locally:", err);
-            setSalas(prev => prev.map(s => {
-                if (s.id === selectedSala.id) {
-                    return {
-                        ...s,
-                        asientos: s.asientos.map(as => as.id === asiento.id ? { ...as, asientoEstado: nuevoEstado } : as)
-                    };
-                }
-                return s;
-            }));
-            setSelectedSala(prev => ({
-                ...prev,
-                asientos: prev.asientos.map(as => as.id === asiento.id ? { ...as, asientoEstado: nuevoEstado } : as)
-            }));
-            showNotification(`Asiento ${asiento.fila}-${asiento.numero} en ${nuevoEstado === "DISPONIBLE" ? "Habilitado" : "Mantenimiento"} (Simulado)`);
+            console.error("Error al cambiar estado del asiento:", err);
+            const msg = err.response?.data?.message || "No se pudo actualizar el estado del asiento.";
+            showNotification(msg, "error");
         }
     };
 

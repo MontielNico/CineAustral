@@ -10,4 +10,5 @@ public class PeliculaRequest {
     private int duracionMinutos;
     private Double puntuacion;
     private Boolean enCartelera;
+    private String clasificacion;
 }

@@ -14,4 +14,5 @@ public class PeliculaResponse {
     private Double puntuacion;
     private String imagenUrl;
     private boolean enCartelera;
+    private String clasificacion;
 }

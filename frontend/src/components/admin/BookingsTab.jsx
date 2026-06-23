@@ -92,6 +92,7 @@ const BookingsTab = ({
                     >
                         <option value="">Todos</option>
                         <option value="CONFIRMADA">Confirmada</option>
+                        <option value="MODIFICADA">Modificada</option>
                         <option value="CANCELADA">Cancelada</option>
                     </select>
                 </div>
@@ -144,11 +145,14 @@ const BookingsTab = ({
                                     </td>
                                     <td className="p-3.5 text-right font-black text-carbon">${r.precioTotal.toFixed(2)}</td>
                                     <td className="p-3.5 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black border uppercase tracking-wider ${r.estado === "CONFIRMADA"
-                                            ? "bg-estepa/10 text-estepa border-estepa/25"
-                                            : "bg-terracota/10 text-terracota border-terracota/25"
+                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black border uppercase tracking-wider ${
+                                            r.estado === "CONFIRMADA"
+                                                ? "bg-estepa/10 text-estepa border-estepa/25"
+                                                : r.estado === "MODIFICADA"
+                                                    ? "bg-cielo/10 text-cielo border-cielo/25"
+                                                    : "bg-terracota/10 text-terracota border-terracota/25"
                                             }`}>
-                                            {r.estado === "CONFIRMADA" ? "Confirmada" : "Cancelada"}
+                                            {r.estado === "CONFIRMADA" ? "Confirmada" : r.estado === "MODIFICADA" ? "Modificada" : "Cancelada"}
                                         </span>
                                     </td>
                                 </tr>

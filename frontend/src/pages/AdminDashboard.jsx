@@ -127,7 +127,8 @@ const AdminDashboard = () => {
                     fecha: fecha,
                     hora: hora,
                     precio: f.precioPorAsiento || 0,
-                    duracionMinutos: f.duracionMinutos
+                    duracionMinutos: f.duracionMinutos,
+                    estado: f.estado
                 };
             });
             setFunciones(mapped);
@@ -211,7 +212,7 @@ const AdminDashboard = () => {
                     hora: hora,
                     asientos: r.asientos || [],
                     precioTotal: r.precioTotal,
-                    estado: r.reservaEstado === "ACTIVA" ? "CONFIRMADA" : r.reservaEstado,
+                    estado: r.reservaEstado === "ACTIVA" ? "CONFIRMADA" : (r.reservaEstado === "MODIFICADA" ? "MODIFICADA" : r.reservaEstado),
                     fechaCreacion: r.fechaReserva ? r.fechaReserva.replace('T', ' ').substring(0, 16) : ""
                 };
             });

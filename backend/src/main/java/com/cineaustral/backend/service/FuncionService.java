@@ -5,11 +5,16 @@ import com.cineaustral.backend.dto.funcion.FuncionResponse;
 import com.cineaustral.backend.entity.Funcion;
 import com.cineaustral.backend.entity.Pelicula;
 import com.cineaustral.backend.entity.Sala;
+import com.cineaustral.backend.enums.FuncionEstado;
+import com.cineaustral.backend.enums.ReservaEstado;
 import com.cineaustral.backend.repository.FuncionRepository;
 import com.cineaustral.backend.repository.PeliculaRepository;
 import com.cineaustral.backend.repository.SalaRepository;
+import com.cineaustral.backend.repository.ReservaRepository;
+import com.cineaustral.backend.entity.Reserva;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -21,6 +26,7 @@ public class FuncionService {
     private final FuncionRepository funcionRepository;
     private final PeliculaRepository peliculaRepository;
     private final SalaRepository salaRepository;
+    private final ReservaRepository reservaRepository;
 
     public List<FuncionResponse> listarFunciones(){
         return funcionRepository.findAll().stream()
@@ -30,6 +36,7 @@ public class FuncionService {
 
     public List<FuncionResponse> listarFuncionesFuturasPorPelicula(Long peliculaId) {
         return funcionRepository.findByPeliculaIdAndFechaHoraInicioAfter(peliculaId, LocalDateTime.now()).stream()
+                .filter(f -> f.getEstado() == FuncionEstado.ACTIVA)
                 .map(this::toResponse)
                 .toList();
     }
@@ -61,13 +68,27 @@ public class FuncionService {
                 .fechaHoraInicio(inicio)
                 .duracionMinutos(request.getDuracionMinutos())
                 .precioPorAsiento(request.getPrecioPorAsiento())
+                .estado(FuncionEstado.ACTIVA)
                 .build();
 
         return toResponse(funcionRepository.save(funcion));
     }
 
+    @Transactional
     public void eliminarFuncion(Long id){
-        funcionRepository.deleteById(id);
+        Funcion funcion = funcionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Función no encontrada"));
+
+        // Cambiar el estado de la funcion a CANCELADA
+        funcion.setEstado(FuncionEstado.CANCELADA);
+        funcionRepository.save(funcion);
+
+        // Buscar todas las reservas asociadas y cambiarlas a CANCELADA
+        List<Reserva> reservasAsociadas = reservaRepository.findByFuncion(funcion);
+        for (Reserva reserva : reservasAsociadas) {
+            reserva.setReservaEstado(ReservaEstado.CANCELADA);
+            reservaRepository.save(reserva);
+        }
     }
 
     //----------------Validaciones---------------------------------
@@ -95,6 +116,7 @@ public class FuncionService {
 
         for(Funcion f : funcionesDia){
             if(idExcluir != null && f.getId().equals(idExcluir)) continue;
+            if(f.getEstado() == FuncionEstado.CANCELADA) continue; // Si la funcion está cancelada, no se solapa
 
             LocalDateTime fInicio = f.getFechaHoraInicio();
             LocalDateTime fFin = f.getFechaHoraFin();
@@ -116,7 +138,8 @@ public class FuncionService {
                 funcion.getFechaHoraInicio().format(formatter),
                 funcion.getFechaHoraFin().format(formatter),
                 funcion.getDuracionMinutos(),
-                funcion.getPrecioPorAsiento()
+                funcion.getPrecioPorAsiento(),
+                funcion.getEstado().name()
         );
     }
 }

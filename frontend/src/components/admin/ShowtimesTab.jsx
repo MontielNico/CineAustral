@@ -42,20 +42,9 @@ const ShowtimesTab = ({
             resetForm();
             fetchFunciones();
         } catch (err) {
-            console.warn("API schedule showtime failed, simulating locally:", err);
-            const newId = Math.max(...funciones.map(f => f.id), 0) + 1;
-            setFunciones(prev => [...prev, {
-                id: newId,
-                peliculaId: requestData.peliculaId,
-                peliculaTitulo: selectedPeli ? selectedPeli.titulo : `Película #${requestData.peliculaId}`,
-                salaId: requestData.salaId,
-                salaNombre: selectedSalaObj ? selectedSalaObj.nombre : `Sala #${requestData.salaId}`,
-                fecha: funcFecha,
-                hora: funcHora + ":00",
-                precio: requestData.precioPorAsiento
-            }]);
-            showNotification("Función programada (Simulado)");
-            resetForm();
+            console.error("Error al programar función:", err);
+            const msg = err.response?.data?.message || "No se pudo registrar la función.";
+            showNotification(msg, "error");
         }
     };
 
@@ -67,16 +56,21 @@ const ShowtimesTab = ({
         setFuncPrecio("");
     };
 
-    const handleDeleteFuncion = async (id) => {
-        if (!window.confirm("¿Estás seguro de eliminar esta función?")) return;
+    const handleDeleteFuncion = async (f) => {
+        const showtimeStart = new Date(`${f.fecha}T${f.hora.substring(0, 5)}:00`).getTime();
+        if (new Date().getTime() >= showtimeStart) {
+            showNotification("No se puede eliminar una función que ya ha iniciado o finalizado", "error");
+            return;
+        }
+        if (!window.confirm("¿Estás seguro de cancelar esta función? Se cancelarán automáticamente todas las reservas asociadas.")) return;
         try {
-            await api.delete(`/admin/funciones/${id}`);
-            showNotification("Función eliminada correctamente");
+            await api.delete(`/admin/funciones/${f.id}`);
+            showNotification("Función cancelada correctamente");
             fetchFunciones();
         } catch (err) {
-            console.warn("API delete showtime failed, simulating locally:", err);
-            setFunciones(prev => prev.filter(f => f.id !== id));
-            showNotification("Función eliminada (Simulado)");
+            console.error("API delete showtime failed:", err);
+            const msg = err.response?.data?.message || "No se pudo cancelar la función.";
+            showNotification(msg, "error");
         }
     };
 
@@ -245,6 +239,7 @@ const ShowtimesTab = ({
                                 <th className="p-3.5">Sala</th>
                                 <th className="p-3.5">Fecha y Hora</th>
                                 <th className="p-3.5 text-right">Precio Entrada</th>
+                                <th className="p-3.5 text-center">Estado</th>
                                 <th className="p-3.5 text-center">Ocupación</th>
                                 <th className="p-3.5 text-center">Acciones</th>
                             </tr>
@@ -255,7 +250,7 @@ const ShowtimesTab = ({
                                 const sId = f.salaId || salas.find(s => s.nombre === f.salaNombre)?.id;
                                 const totalCap = salas.find(s => s.id === sId)?.asientos?.length || 48;
                                 const occupancyCount = reservas
-                                    .filter(r => r.peliculaTitulo === f.peliculaTitulo && r.salaNombre.includes(f.salaNombre) && r.estado === "CONFIRMADA")
+                                    .filter(r => r.peliculaTitulo === f.peliculaTitulo && r.salaNombre.includes(f.salaNombre) && (r.estado === "CONFIRMADA" || r.estado === "MODIFICADA"))
                                     .reduce((sum, r) => sum + r.asientos.length, 0);
 
                                 return (
@@ -265,17 +260,41 @@ const ShowtimesTab = ({
                                         <td className="p-3.5 font-semibold text-carbon">{formatFechaLegible(f.fecha)} - {f.hora.substring(0, 5)} hs</td>
                                         <td className="p-3.5 text-right font-bold text-estepa">${f.precio.toFixed(2)}</td>
                                         <td className="p-3.5 text-center">
+                                            {f.estado === "CANCELADA" ? (
+                                                <span className="font-extrabold text-terracota bg-terracota/10 border border-terracota/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                                                    Cancelada
+                                                </span>
+                                            ) : (
+                                                <span className="font-extrabold text-estepa bg-estepa/10 border border-estepa/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                                                    Activa
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="p-3.5 text-center">
                                             <span className="font-bold text-carbon bg-nieve border border-piedra/15 px-2 py-0.5 rounded text-[10px]">
                                                 {occupancyCount} / {totalCap} seats
                                             </span>
                                         </td>
                                         <td className="p-3.5 text-center">
-                                            <button
-                                                onClick={() => handleDeleteFuncion(f.id)}
-                                                className="text-xs text-terracota font-bold hover:underline cursor-pointer bg-transparent border-0"
-                                            >
-                                                Eliminar
-                                            </button>
+                                            {f.estado === "CANCELADA" ? (
+                                                <span className="text-piedra/40 font-semibold italic text-[11px]">Cancelada</span>
+                                            ) : (() => {
+                                                const showtimeStart = new Date(`${f.fecha}T${f.hora.substring(0, 5)}:00`).getTime();
+                                                const hasStarted = new Date().getTime() >= showtimeStart;
+                                                return (
+                                                    <button
+                                                        disabled={hasStarted}
+                                                        onClick={() => handleDeleteFuncion(f)}
+                                                        className={`text-xs font-bold bg-transparent border-0 ${hasStarted
+                                                                ? "text-piedra/40 cursor-not-allowed"
+                                                                : "text-terracota hover:underline cursor-pointer"
+                                                            }`}
+                                                        title={hasStarted ? "La función ya inició y no puede eliminarse" : "Eliminar función"}
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                );
+                                            })()}
                                         </td>
                                     </tr>
                                 );

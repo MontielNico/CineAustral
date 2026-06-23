@@ -2,14 +2,18 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axiosConfig";
-import { Check, X, Film, Ticket, Settings, Calendar, ClipboardList } from "lucide-react";
+import { Check, X, Film, Ticket, Settings, Calendar, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react";
 
 const Home = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
-    // Views: "dashboard", "cartelera", "reservas", "modificar"
-    const [currentView, setCurrentView] = useState("dashboard");
+    // Views: "cartelera", "reservas", "modificar"
+    const [currentView, setCurrentView] = useState("cartelera");
+
+    // Slider state
+    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+    const [visibleCount, setVisibleCount] = useState(3);
 
     // Notification/toast state
     const [notification, setNotification] = useState(null);
@@ -41,6 +45,134 @@ const Home = () => {
     const [loadingAsientos, setLoadingAsientos] = useState(false);
     const [selectedSeats, setSelectedSeats] = useState([]);
 
+    // Payment Gateway simulated states
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [isModifyingPayment, setIsModifyingPayment] = useState(false);
+    const [cardName, setCardName] = useState("");
+    const [cardNumber, setCardNumber] = useState("");
+    const [cardExpiry, setCardExpiry] = useState("");
+    const [cardCvv, setCardCvv] = useState("");
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [paymentStatusMessage, setPaymentStatusMessage] = useState("");
+    const [paymentError, setPaymentError] = useState("");
+
+    const abrirPasarelaPago = (modifying) => {
+        setIsModifyingPayment(modifying);
+        setCardName("");
+        setCardNumber("");
+        setCardExpiry("");
+        setCardCvv("");
+        setPaymentError("");
+        setPaymentStatusMessage("");
+        setShowPaymentModal(true);
+    };
+
+    const handleCardNumberChange = (e) => {
+        let val = e.target.value.replace(/\D/g, "");
+        if (val.length > 16) val = val.substring(0, 16);
+        const matches = val.match(/\d{4,16}/g);
+        const match = (matches && matches[0]) || "";
+        const parts = [];
+        for (let i = 0, len = match.length; i < len; i += 4) {
+            parts.push(match.substring(i, i + 4));
+        }
+        if (parts.length > 0) {
+            setCardNumber(parts.join(" "));
+        } else {
+            setCardNumber(val);
+        }
+    };
+
+    const handleExpiryChange = (e) => {
+        let val = e.target.value.replace(/\D/g, "");
+        if (val.length > 4) val = val.substring(0, 4);
+        if (val.length >= 3) {
+            setCardExpiry(`${val.substring(0, 2)}/${val.substring(2)}`);
+        } else {
+            setCardExpiry(val);
+        }
+    };
+
+    const handleCvvChange = (e) => {
+        const val = e.target.value.replace(/\D/g, "");
+        if (val.length <= 3) setCardCvv(val);
+    };
+
+    const ejecutarPagoYReserva = async (e) => {
+        e.preventDefault();
+        if (cardNumber.replace(/\s/g, "").length !== 16) {
+            setPaymentError("Número de tarjeta inválido. Deben ser 16 dígitos.");
+            return;
+        }
+        if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+            setPaymentError("Fecha de vencimiento inválida. Formato MM/YY.");
+            return;
+        }
+        const [month, year] = cardExpiry.split("/");
+        const monthNum = parseInt(month, 10);
+        if (monthNum < 1 || monthNum > 12) {
+            setPaymentError("Mes de vencimiento inválido. Debe ser de 01 a 12.");
+            return;
+        }
+        if (cardCvv.length !== 3) {
+            setPaymentError("CVV inválido. Deben ser 3 dígitos.");
+            return;
+        }
+        if (!cardName.trim()) {
+            setPaymentError("Debe ingresar el nombre del titular.");
+            return;
+        }
+
+        setPaymentError("");
+        setIsProcessingPayment(true);
+        setPaymentStatusMessage("Conectando con el procesador de pagos...");
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setPaymentStatusMessage("Verificando fondos y validez de tarjeta...");
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setPaymentStatusMessage("Procesando pago con la entidad bancaria...");
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // 15% chance of payment rejection
+        if (Math.random() < 0.15) {
+            setIsProcessingPayment(false);
+            setPaymentError("Pago rechazado: Transacción denegada por la entidad emisora (fondos insuficientes o límite excedido). Intente con otra tarjeta.");
+            return;
+        }
+
+        setPaymentStatusMessage("Confirmando reserva con el sistema...");
+
+        try {
+            if (isModifyingPayment) {
+                const requestBody = {
+                    funcionId: selectedFuncion.id,
+                    asientoIds: selectedSeats.map(s => s.id),
+                    clienteId: user.id
+                };
+                await api.put(`/api/reservas/${reservaParaModificar.id}`, requestBody);
+                showNotification("¡Reserva modificada y pago procesado con éxito!");
+                setReservaParaModificar(null);
+            } else {
+                const requestBody = {
+                    funcionId: selectedFuncion.id,
+                    asientoIds: selectedSeats.map(s => s.id),
+                    clienteId: user.id
+                };
+                await api.post("/api/reservas/online", requestBody);
+                showNotification("¡Reserva realizada y pago procesado con éxito!");
+            }
+            setShowPaymentModal(false);
+            setCurrentView("reservas");
+        } catch (err) {
+            console.error(err);
+            setIsProcessingPayment(false);
+            const msg = err.response?.data?.message || "Error al registrar la reserva en el sistema.";
+            setPaymentError(msg);
+        }
+    };
+
     // Fetch listings when views change
     useEffect(() => {
         if (currentView === "cartelera") {
@@ -54,6 +186,47 @@ const Home = () => {
             setReservaParaModificar(null);
         }
     }, [currentView]);
+
+    // Update visible items count based on window width
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 640) {
+                setVisibleCount(1);
+            } else if (window.innerWidth < 1024) {
+                setVisibleCount(2);
+            } else if (window.innerWidth < 1280) {
+                setVisibleCount(3);
+            } else {
+                setVisibleCount(4);
+            }
+        };
+
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    // Reset index if visibleCount or peliculas length changes
+    useEffect(() => {
+        setCurrentSlideIndex((prev) => {
+            const maxIndex = Math.max(0, peliculas.length - visibleCount);
+            return prev > maxIndex ? maxIndex : prev;
+        });
+    }, [visibleCount, peliculas]);
+
+    const handlePrevSlide = () => {
+        setCurrentSlideIndex((prev) => Math.max(0, prev - 1));
+    };
+
+    const handleNextSlide = () => {
+        setCurrentSlideIndex((prev) => {
+            const maxIndex = Math.max(0, peliculas.length - visibleCount);
+            return Math.min(maxIndex, prev + 1);
+        });
+    };
+
+    const maxSlideIndex = Math.max(0, peliculas.length - visibleCount);
+    const showArrows = peliculas.length > visibleCount;
 
     const fetchPeliculas = async () => {
         setLoadingPeliculas(true);
@@ -256,23 +429,47 @@ const Home = () => {
 
     return (
         <div className="min-h-screen bg-nieve text-carbon font-sans flex flex-col relative pb-12">
-            {/* Header / Navbar */}
-            <nav className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 sm:px-12 bg-carbon border-b border-piedra/15 sticky top-0 z-50 shadow-md">
-                <div
-                    className="flex items-center gap-4 mb-3 sm:mb-0 cursor-pointer"
-                    onClick={() => setCurrentView("dashboard")}
+            {/* Header / Navbar (Same as welcome layout) */}
+            <header className="bg-carbon border-b border-piedra/15 sticky top-0 z-50 shadow-md px-6 py-4 md:px-12 flex justify-between items-center">
+                <div 
+                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => {
+                        setCurrentView("cartelera");
+                        setSelectedPelicula(null);
+                        setSelectedFuncion(null);
+                        setSelectedSeats([]);
+                        setCurrentSlideIndex(0);
+                    }}
                 >
-                    <div className="text-3xl font-black tracking-tight text-white select-none">
-                        CINE<span className="text-cielo">AUSTRAL</span>
-                    </div>
+                    <img 
+                        src="/logo.png" 
+                        alt="CineAustral Logo" 
+                        className="h-10 w-auto object-contain" 
+                    />
+                    <span className="text-2xl font-black tracking-tight text-white select-none">
+                        Cine<span className="text-cielo">Austral</span>
+                    </span>
                 </div>
+
                 <div className="flex items-center gap-4">
-                    <span className="bg-cielo/15 border border-cielo/30 text-cielo px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase">
-                        {user.rol}
-                    </span>
-                    <span className="font-semibold text-white">
-                        {user.nombre} {user.apellido}
-                    </span>
+                    {/* Mis Reservas Button in Header */}
+                    <button
+                        onClick={() => {
+                            setCurrentView("reservas");
+                            setSelectedPelicula(null);
+                            setSelectedFuncion(null);
+                            setSelectedSeats([]);
+                            setCurrentSlideIndex(0);
+                        }}
+                        className={`inline-flex items-center gap-2 font-bold text-sm px-4.5 py-2 rounded-lg transition-all duration-200 cursor-pointer ${currentView === "reservas"
+                                ? "bg-cielo text-white shadow-md shadow-cielo/20"
+                                : "bg-transparent border border-white/20 text-white/80 hover:bg-white/10 hover:text-white"
+                            }`}
+                    >
+                        <Ticket className="w-4 h-4" />
+                        Mis Reservas
+                    </button>
+
                     <button
                         className="bg-transparent border border-white/30 text-nieve px-3.5 py-1.5 rounded-lg font-semibold text-sm cursor-pointer hover:bg-terracota/15 hover:border-terracota hover:text-white transition-all duration-200"
                         onClick={logout}
@@ -280,13 +477,13 @@ const Home = () => {
                         Cerrar Sesión
                     </button>
                 </div>
-            </nav>
+            </header>
 
             {/* Notification Toast */}
             {notification && (
                 <div className={`fixed bottom-6 right-6 px-6 py-4 rounded-xl shadow-2xl z-50 border flex items-center gap-3 transition-all duration-300 animate-bounce ${notification.type === "success"
-                        ? "bg-estepa text-white border-estepa"
-                        : "bg-terracota text-white border-terracota"
+                    ? "bg-estepa text-white border-estepa"
+                    : "bg-terracota text-white border-terracota"
                     }`}>
                     {notification.type === "success" ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
                     <span className="text-sm font-bold">{notification.text}</span>
@@ -296,165 +493,157 @@ const Home = () => {
             {/* Main Application Container */}
             <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 py-8 flex flex-col gap-8">
 
-                {/* 1. VIEW: DASHBOARD */}
-                {currentView === "dashboard" && (
-                    <>
-                        <section className="bg-white border border-piedra/20 rounded-xl p-6 sm:p-8 text-left shadow-sm">
-                            <div className="mb-6">
-                                <h1 className="text-3xl sm:text-4xl font-extrabold text-carbon mb-2 tracking-tight">
-                                    ¡Bienvenido, {user.nombre}!
-                                </h1>
-                                <p className="text-piedra text-base sm:text-lg">
-                                    Gestiona tus reservas de cine de forma rápida, segura y en tiempo real.
-                                </p>
-                            </div>
-
-                            <div className="border-t border-piedra/15 pt-6">
-                                <h2 className="text-lg font-bold text-carbon mb-4">Detalles de tu Perfil</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-piedra font-bold tracking-wider uppercase">Nombre Completo:</span>
-                                        <span className="text-base text-carbon font-semibold">{user.nombre} {user.apellido}</span>
-                                    </div>
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-piedra font-bold tracking-wider uppercase">Correo Electrónico:</span>
-                                        <span className="text-base text-carbon font-semibold break-all">{user.email}</span>
-                                    </div>
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-piedra font-bold tracking-wider uppercase">ID de Cliente:</span>
-                                        <span className="text-base text-carbon font-semibold">#{user.id}</span>
-                                    </div>
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-piedra font-bold tracking-wider uppercase">Rol:</span>
-                                        <span className="inline-flex self-start px-2.5 py-0.5 rounded text-xs font-bold uppercase border mt-1 bg-estepa/10 text-estepa border-estepa/20">
-                                            {user.rol}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {/* Card: Reservar */}
-                            <div className="bg-white border border-piedra/15 rounded-xl p-6 sm:p-8 text-left flex flex-col items-start gap-4 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-cielo/50">
-                                <div className="p-3 bg-cielo/10 rounded-xl text-cielo">
-                                    <Film className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-bold text-carbon">Reservar Entradas</h3>
-                                <p className="text-sm text-piedra leading-relaxed flex-1">
-                                    Explora nuestra cartelera, selecciona una función y reserva tus asientos preferidos en tiempo real.
-                                </p>
-                                <button
-                                    onClick={() => setCurrentView("cartelera")}
-                                    className="w-full bg-cielo hover:bg-lago text-white font-bold text-sm py-2.5 rounded-lg transition-all duration-200 text-center shadow-md cursor-pointer"
-                                >
-                                    Ir a Cartelera
-                                </button>
-                            </div>
-
-                            {/* Card: Mis Reservas */}
-                            <div className="bg-white border border-piedra/15 rounded-xl p-6 sm:p-8 text-left flex flex-col items-start gap-4 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1 hover:border-cielo/50">
-                                <div className="p-3 bg-cielo/10 rounded-xl text-cielo">
-                                    <Ticket className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-bold text-carbon">Mis Reservas</h3>
-                                <p className="text-sm text-piedra leading-relaxed flex-1">
-                                    Consulta tu historial de reservas y tickets activos. Puedes modificar o cancelar tus compras aquí.
-                                </p>
-                                <button
-                                    onClick={() => setCurrentView("reservas")}
-                                    className="w-full bg-cielo hover:bg-lago text-white font-bold text-sm py-2.5 rounded-lg transition-all duration-200 text-center shadow-md cursor-pointer"
-                                >
-                                    Ver Mis Reservas
-                                </button>
-                            </div>
-
-                            {/* Card: Admin Panel (Conditional) */}
-                            {user.rol === "ADMIN" && (
-                                <div className="relative overflow-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:from-terracota before:to-[#a04935] hover:border-terracota/40 bg-white border border-piedra/15 rounded-xl p-6 sm:p-8 text-left flex flex-col items-start gap-4 transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-1">
-                                    <div className="p-3 bg-terracota/10 rounded-xl text-terracota">
-                                        <Settings className="w-6 h-6" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-carbon">Administración</h3>
-                                    <p className="text-sm text-piedra leading-relaxed flex-1">
-                                        Herramientas de administración para gestionar películas, salas, funciones, asientos y usuarios.
-                                    </p>
-                                    <button
-                                        onClick={() => navigate("/admin")}
-                                        className="w-full bg-terracota hover:bg-[#a04935] text-white font-bold text-sm py-2.5 rounded-lg transition-all duration-200 text-center shadow-md cursor-pointer"
-                                    >
-                                        Panel de Control
-                                    </button>
-                                </div>
-                            )}
-                        </section>
-                    </>
-                )}
-
-                {/* 2. VIEW: CARTELERA (RESERVAR ENTRADAS) */}
+                {/* VIEW: CARTELERA (MAIN CONTENT) */}
                 {currentView === "cartelera" && (
                     <div className="flex flex-col gap-6">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-2xl sm:text-3xl font-extrabold text-carbon">Cartelera de Cine</h2>
-                            <button
-                                onClick={() => setCurrentView("dashboard")}
-                                className="bg-transparent border border-piedra/35 text-piedra hover:text-carbon hover:bg-carbon/5 px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer transition-all"
-                            >
-                                ← Volver al Panel
-                            </button>
-                        </div>
-
                         {/* STEP 2.1: MOVIE SELECTION LIST */}
                         {!selectedPelicula && (
                             <>
+                                {/* Personalized Welcome Section */}
+                                <section
+                                    className="relative text-white py-14 px-6 md:px-10 rounded-2xl overflow-hidden shadow-md text-center bg-cover bg-center bg-no-repeat mb-2 border border-white/10"
+                                    style={{ backgroundImage: "url('/fondoBienvenida.png')" }}
+                                >
+                                    <div className="absolute inset-0 bg-carbon/75 backdrop-blur-[4px] pointer-events-none z-1"></div>
+
+                                    <div className="relative z-10 max-w-2xl mx-auto flex flex-col gap-3.5 items-center">
+                                        <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
+                                            ¡Hola, <span className="text-cielo">{user.nombre}</span>! ¿Qué película vas a ver hoy?
+                                        </h1>
+                                        <p className="text-nieve/85 text-sm md:text-base font-semibold leading-relaxed">
+                                            Elegí tu película favorita de la cartelera a continuación y reservá tus asientos en unos simples pasos.
+                                        </p>
+                                        <div className="w-16 h-0.5 bg-cielo rounded-full mt-1"></div>
+                                    </div>
+                                </section>
+
+                                <div className="flex flex-col gap-2 items-start mt-2">
+                                    <h2 className="text-2xl md:text-3xl font-extrabold text-carbon tracking-tight">Películas en Cartelera</h2>
+                                    <p className="text-piedra text-xs font-semibold">Seleccioná una película para ver las funciones y reservar</p>
+                                </div>
+
                                 {loadingPeliculas ? (
                                     <div className="flex flex-col items-center py-12">
                                         <div className="w-12 h-12 border-4 border-cielo border-t-transparent rounded-full animate-spin"></div>
-                                        <p className="mt-4 text-piedra font-semibold">Cargando cartelera...</p>
+                                        <p className="mt-4 text-piedra font-bold text-sm">Cargando cartelera...</p>
                                     </div>
                                 ) : peliculas.length === 0 ? (
                                     <div className="bg-white border border-piedra/25 rounded-xl p-12 text-center">
                                         <p className="text-piedra text-lg font-semibold mb-4">No hay películas en cartelera en este momento.</p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {peliculas.map(p => (
-                                            <div key={p.id} className="bg-white border border-piedra/15 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all flex flex-col">
-                                                <div className="h-64 bg-gradient-to-br from-cielo/40 to-lago/60 relative flex items-center justify-center text-white overflow-hidden">
-                                                    {p.imagenUrl ? (
-                                                        <img
-                                                            src={`http://localhost:8080${p.imagenUrl}`}
-                                                            alt={p.titulo}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="flex flex-col items-center gap-2 p-4 text-center">
-                                                            <span className="text-5xl">🎬</span>
-                                                            <span className="font-extrabold text-lg uppercase tracking-wider">{p.titulo}</span>
+                                    <div className="relative w-full px-2 sm:px-10">
+                                        {/* Slider Viewport Container */}
+                                        <div className="overflow-hidden w-full py-4">
+                                            <div 
+                                                className="flex transition-transform duration-500 ease-out gap-6"
+                                                style={{ 
+                                                    justifyContent: showArrows ? "flex-start" : "center",
+                                                    transform: showArrows ? `translateX(calc(-${currentSlideIndex * (100 / visibleCount)}% - ${currentSlideIndex * 1.5}rem))` : "none"
+                                                }}
+                                            >
+                                                {peliculas.map((p) => (
+                                                    <div
+                                                        key={p.id}
+                                                        onClick={() => handleSelectPelicula(p)}
+                                                        className="group bg-white border border-piedra/15 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col cursor-pointer hover:border-cielo/30 shrink-0 text-left"
+                                                        style={{ 
+                                                            width: `calc((100% - ${(visibleCount - 1) * 1.5}rem) / ${visibleCount})`,
+                                                            minWidth: visibleCount === 1 ? "100%" : visibleCount === 2 ? "calc((100% - 1.5rem) / 2)" : "250px"
+                                                        }}
+                                                    >
+                                                        {/* Image Container */}
+                                                        <div className="h-64 bg-gradient-to-br from-cielo/40 to-lago/60 relative flex items-center justify-center text-white overflow-hidden">
+                                                            {p.imagenUrl ? (
+                                                                <img
+                                                                    src={`http://localhost:8080${p.imagenUrl}`}
+                                                                    alt={p.titulo}
+                                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex flex-col items-center gap-2 p-4 text-center">
+                                                                    <span className="text-5xl">🎬</span>
+                                                                    <span className="font-extrabold text-lg uppercase tracking-wider">{p.titulo}</span>
+                                                                </div>
+                                                            )}
+                                                            {/* Rating Badge */}
+                                                            <span className="absolute top-3 right-3 bg-carbon/85 text-white px-2.5 py-1 rounded-full text-xs font-bold border border-white/20">
+                                                                ★ {p.puntuacion?.toFixed(1) || "N/A"}
+                                                            </span>
                                                         </div>
-                                                    )}
-                                                    <span className="absolute top-3 right-3 bg-carbon/85 text-white px-2.5 py-1 rounded-full text-xs font-bold border border-white/20">
-                                                        ★ {p.puntuacion?.toFixed(1) || "N/A"}
-                                                    </span>
-                                                </div>
-                                                <div className="p-6 flex-1 flex flex-col justify-between gap-4">
-                                                    <div className="flex flex-col gap-2">
-                                                        <h3 className="text-xl font-bold text-carbon tracking-tight line-clamp-1">{p.titulo}</h3>
-                                                        <span className="text-xs font-bold text-cielo uppercase tracking-wide">{p.genero}</span>
-                                                        <p className="text-sm text-piedra line-clamp-3 leading-relaxed mt-1">{p.sinopsis || "Sin sinopsis disponible."}</p>
+
+                                                        {/* Info Container */}
+                                                        <div className="p-6 flex-1 flex flex-col justify-between gap-4">
+                                                            <div className="flex flex-col gap-2">
+                                                                <span className="text-xs font-black text-cielo uppercase tracking-wider">{p.genero}</span>
+                                                                <h3 className="text-xl font-bold text-carbon group-hover:text-cielo transition-colors duration-200 tracking-tight line-clamp-1">{p.titulo}</h3>
+                                                                <p className="text-sm text-piedra line-clamp-3 leading-relaxed mt-1">{p.sinopsis || "Sin sinopsis disponible."}</p>
+                                                            </div>
+                                                            <div className="pt-3 border-t border-piedra/10 flex justify-between items-center">
+                                                                <span className="text-xs text-piedra font-bold">Duración: {p.duracionMinutos} min</span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleSelectPelicula(p);
+                                                                    }}
+                                                                    className="bg-cielo hover:bg-lago text-white font-bold text-xs px-4 py-2 rounded-lg cursor-pointer transition-all"
+                                                                >
+                                                                    Ver Funciones
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="pt-3 border-t border-piedra/10 flex justify-between items-center">
-                                                        <span className="text-xs text-piedra font-bold">Duración: {p.duracionMinutos} min</span>
-                                                        <button
-                                                            onClick={() => handleSelectPelicula(p)}
-                                                            className="bg-cielo hover:bg-lago text-white font-bold text-xs px-4 py-2 rounded-lg cursor-pointer transition-all"
-                                                        >
-                                                            Ver Funciones
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                                ))}
                                             </div>
-                                        ))}
+                                        </div>
+
+                                        {/* Slider Navigation Arrows */}
+                                        {showArrows && (
+                                            <>
+                                                <button
+                                                    onClick={handlePrevSlide}
+                                                    disabled={currentSlideIndex === 0}
+                                                    className={`absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-piedra/25 flex items-center justify-center shadow-lg transition-all z-10 cursor-pointer ${
+                                                        currentSlideIndex === 0 
+                                                            ? "bg-white/40 text-piedra/30 border-piedra/10 cursor-not-allowed" 
+                                                            : "bg-white text-carbon hover:bg-cielo hover:text-white hover:border-cielo"
+                                                    }`}
+                                                    title="Anterior"
+                                                >
+                                                    <ChevronLeft className="w-6 h-6" />
+                                                </button>
+                                                <button
+                                                    onClick={handleNextSlide}
+                                                    disabled={currentSlideIndex === maxSlideIndex}
+                                                    className={`absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full border border-piedra/25 flex items-center justify-center shadow-lg transition-all z-10 cursor-pointer ${
+                                                        currentSlideIndex === maxSlideIndex 
+                                                            ? "bg-white/40 text-piedra/30 border-piedra/10 cursor-not-allowed" 
+                                                            : "bg-white text-carbon hover:bg-cielo hover:text-white hover:border-cielo"
+                                                    }`}
+                                                    title="Siguiente"
+                                                >
+                                                    <ChevronRight className="w-6 h-6" />
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {/* Slider Indicator Dots */}
+                                        {showArrows && (
+                                            <div className="flex justify-center gap-2 mt-6">
+                                                {Array.from({ length: maxSlideIndex + 1 }).map((_, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => setCurrentSlideIndex(idx)}
+                                                        className={`w-2.5 h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                                            currentSlideIndex === idx 
+                                                                ? "bg-cielo w-6" 
+                                                                : "bg-piedra/30 hover:bg-piedra/60"
+                                                        }`}
+                                                        title={`Ir al slide ${idx + 1}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </>
@@ -521,7 +710,10 @@ const Home = () => {
 
                                 <div className="pt-4 flex">
                                     <button
-                                        onClick={() => setSelectedPelicula(null)}
+                                        onClick={() => {
+                                            setSelectedPelicula(null);
+                                            setCurrentSlideIndex(0);
+                                        }}
                                         className="bg-transparent border border-piedra/30 text-piedra hover:text-carbon hover:bg-carbon/5 px-4 py-2 rounded-lg font-semibold text-xs cursor-pointer transition-all"
                                     >
                                         Volver a la Cartelera
@@ -671,10 +863,10 @@ const Home = () => {
                                         <div className="flex flex-col gap-3">
                                             <button
                                                 disabled={selectedSeats.length === 0}
-                                                onClick={handleCrearReserva}
+                                                onClick={() => abrirPasarelaPago(false)}
                                                 className={`w-full font-bold text-sm py-3 rounded-lg transition-all duration-200 text-center shadow cursor-pointer ${selectedSeats.length > 0
-                                                        ? "bg-estepa hover:bg-estepa/90 text-white shadow-estepa/10"
-                                                        : "bg-piedra/20 text-piedra/50 cursor-not-allowed shadow-none"
+                                                    ? "bg-estepa hover:bg-estepa/90 text-white shadow-estepa/10"
+                                                    : "bg-piedra/20 text-piedra/50 cursor-not-allowed shadow-none"
                                                     }`}
                                             >
                                                 Confirmar Reserva
@@ -699,10 +891,15 @@ const Home = () => {
                         <div className="flex justify-between items-center">
                             <h2 className="text-2xl sm:text-3xl font-extrabold text-carbon">Mis Reservas</h2>
                             <button
-                                onClick={() => setCurrentView("dashboard")}
+                                onClick={() => {
+                                    setCurrentView("cartelera");
+                                    setSelectedPelicula(null);
+                                    setSelectedFuncion(null);
+                                    setCurrentSlideIndex(0);
+                                }}
                                 className="bg-transparent border border-piedra/35 text-piedra hover:text-carbon hover:bg-carbon/5 px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer transition-all"
                             >
-                                ← Volver al Panel
+                                ← Volver a la Cartelera
                             </button>
                         </div>
 
@@ -724,7 +921,7 @@ const Home = () => {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {reservas.map(r => {
-                                    const esActiva = r.reservaEstado === "ACTIVA";
+                                    const esActiva = r.reservaEstado === "ACTIVA" || r.reservaEstado === "MODIFICADA";
                                     const limiteModificacionCancelacion = r.fechaHoraInicio ? new Date(r.fechaHoraInicio).getTime() - 10 * 60 * 1000 : 0;
                                     const limiteSuperado = new Date().getTime() >= limiteModificacionCancelacion;
                                     return (
@@ -735,8 +932,8 @@ const Home = () => {
                                                     <span className="font-extrabold text-base line-clamp-1">{r.peliculaTitulo}</span>
                                                 </div>
                                                 <span className={`px-2.5 py-0.5 rounded text-xs font-black uppercase border ${esActiva
-                                                        ? "bg-estepa/10 text-estepa border-estepa/20"
-                                                        : "bg-terracota/10 text-terracota border-terracota/20"
+                                                    ? "bg-estepa/10 text-estepa border-estepa/20"
+                                                    : "bg-terracota/10 text-terracota border-terracota/20"
                                                     }`}>
                                                     {r.reservaEstado}
                                                 </span>
@@ -770,12 +967,14 @@ const Home = () => {
 
                                                 {esActiva && !limiteSuperado && (
                                                     <div className="pt-4 border-t border-piedra/10 flex gap-3">
-                                                        <button
-                                                            onClick={() => iniciarModificacion(r)}
-                                                            className="flex-1 bg-lago hover:bg-carbon text-white font-bold text-xs py-2.5 rounded-lg text-center cursor-pointer transition-all shadow-sm shadow-lago/10"
-                                                        >
-                                                            ✏️ Modificar
-                                                        </button>
+                                                        {r.reservaEstado === "ACTIVA" && (
+                                                            <button
+                                                                onClick={() => iniciarModificacion(r)}
+                                                                className="flex-1 bg-lago hover:bg-carbon text-white font-bold text-xs py-2.5 rounded-lg text-center cursor-pointer transition-all shadow-sm shadow-lago/10"
+                                                            >
+                                                                ✏️ Modificar
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleCancelarReserva(r.id)}
                                                             className="flex-1 bg-transparent border border-terracota text-terracota hover:bg-terracota/10 font-bold text-xs py-2.5 rounded-lg text-center cursor-pointer transition-all"
@@ -850,8 +1049,8 @@ const Home = () => {
                                                 <div
                                                     key={f.id}
                                                     className={`border rounded-xl p-4 flex justify-between items-center gap-4 hover:bg-cielo/5 transition-all ${esActual
-                                                            ? "border-cielo/70 bg-cielo/5 ring-1 ring-cielo/30"
-                                                            : "border-piedra/20 hover:border-cielo"
+                                                        ? "border-cielo/70 bg-cielo/5 ring-1 ring-cielo/30"
+                                                        : "border-piedra/20 hover:border-cielo"
                                                         }`}
                                                 >
                                                     <div className="flex flex-col gap-1">
@@ -899,8 +1098,8 @@ const Home = () => {
                                         <div className="mt-3 flex items-center gap-3">
                                             <span className="text-xs text-piedra font-bold">Progreso:</span>
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-black uppercase ${selectedSeats.length === reservaParaModificar.asientos.length
-                                                    ? "bg-estepa text-white"
-                                                    : "bg-terracota/10 text-terracota"
+                                                ? "bg-estepa text-white"
+                                                : "bg-terracota/10 text-terracota"
                                                 }`}>
                                                 {selectedSeats.length} / {reservaParaModificar.asientos.length} seleccionados
                                             </span>
@@ -1051,8 +1250,8 @@ const Home = () => {
                                                 disabled={selectedSeats.length !== reservaParaModificar.asientos.length}
                                                 onClick={handleConfirmarModificacion}
                                                 className={`w-full font-bold text-sm py-3 rounded-lg transition-all duration-200 text-center shadow cursor-pointer ${selectedSeats.length === reservaParaModificar.asientos.length
-                                                        ? "bg-estepa hover:bg-estepa/90 text-white shadow-estepa/10"
-                                                        : "bg-piedra/20 text-piedra/50 cursor-not-allowed shadow-none"
+                                                    ? "bg-estepa hover:bg-estepa/90 text-white shadow-estepa/10"
+                                                    : "bg-piedra/20 text-piedra/50 cursor-not-allowed shadow-none"
                                                     }`}
                                             >
                                                 Confirmar Modificación
@@ -1074,6 +1273,145 @@ const Home = () => {
                     </div>
                 )}
             </main>
+
+            {/* PAYMENT MODAL */}
+            {showPaymentModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-md animate-fadeIn">
+                    <div className="bg-white border border-piedra/10 w-full max-w-md rounded-2xl p-6 shadow-2xl relative text-left overflow-hidden">
+                        {/* Header */}
+                        <div className="flex justify-between items-center border-b border-piedra/10 pb-4 mb-4">
+                            <h3 className="text-lg font-black text-carbon uppercase tracking-wider">Pasarela de Pago</h3>
+                            <button
+                                disabled={isProcessingPayment}
+                                onClick={() => setShowPaymentModal(false)}
+                                className="text-piedra hover:text-carbon font-extrabold text-sm bg-transparent border-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Loading Processing State Overlay */}
+                        {isProcessingPayment && (
+                            <div className="absolute inset-0 bg-white/95 backdrop-blur-xs z-10 flex flex-col items-center justify-center p-6 text-center">
+                                <div className="w-12 h-12 border-4 border-cielo border-t-transparent rounded-full animate-spin mb-4"></div>
+                                <p className="text-sm font-bold text-carbon tracking-wide animate-pulse">{paymentStatusMessage}</p>
+                                <p className="text-[11px] text-piedra mt-2 font-semibold">Por favor no cierre ni recargue esta ventana.</p>
+                            </div>
+                        )}
+
+                        {/* Visa Card Mockup Preview */}
+                        <div className="w-full h-44 bg-gradient-to-tr from-carbon to-lago rounded-2xl p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between border border-white/10 mb-6">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[9px] font-bold text-nieve/60 uppercase tracking-widest">Tarjeta de Pago</span>
+                                    <span className="text-sm font-black tracking-wider uppercase">CineAustral Club</span>
+                                </div>
+                                <div className="text-2xl font-black italic text-white/40">VISA</div>
+                            </div>
+                            <div className="text-xl font-bold tracking-[0.2em] font-mono text-center my-3 select-none">
+                                {cardNumber || "•••• •••• •••• ••••"}
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                                <div className="flex flex-col gap-0.5 text-left">
+                                    <span className="text-[8px] font-bold text-nieve/50 uppercase tracking-wider">Titular</span>
+                                    <span className="font-extrabold uppercase truncate max-w-[150px]">{cardName || "NOMBRE TITULAR"}</span>
+                                </div>
+                                <div className="flex flex-col gap-0.5 text-right">
+                                    <span className="text-[8px] font-bold text-nieve/50 uppercase tracking-wider">Vence</span>
+                                    <span className="font-extrabold">{cardExpiry || "MM/YY"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Error Message */}
+                        {paymentError && (
+                            <div className="bg-terracota/10 border border-terracota/25 p-3 rounded-lg text-xs font-bold text-terracota mb-4 text-left">
+                                ⚠️ {paymentError}
+                            </div>
+                        )}
+
+                        {/* Card Form */}
+                        <form onSubmit={ejecutarPagoYReserva} className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold uppercase text-piedra tracking-wider">Nombre del Titular</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Ej: IGNACIO MONTIEL RUIZ"
+                                    className="px-3 py-2 text-sm border border-piedra/30 rounded-lg outline-hidden focus:border-cielo bg-white text-carbon uppercase font-semibold"
+                                    value={cardName}
+                                    onChange={e => setCardName(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-bold uppercase text-piedra tracking-wider">Número de Tarjeta</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="4500 0000 0000 0000"
+                                    className="px-3 py-2 text-sm border border-piedra/30 rounded-lg outline-hidden focus:border-cielo bg-white text-carbon font-semibold tracking-wider"
+                                    value={cardNumber}
+                                    onChange={handleCardNumberChange}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-xs font-bold uppercase text-piedra tracking-wider">Vencimiento</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="MM/YY"
+                                        className="px-3 py-2 text-sm border border-piedra/30 rounded-lg outline-hidden focus:border-cielo bg-white text-carbon font-semibold text-center"
+                                        value={cardExpiry}
+                                        onChange={handleExpiryChange}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-xs font-bold uppercase text-piedra tracking-wider">CVV (Cod. Seguridad)</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        placeholder="•••"
+                                        maxLength="3"
+                                        className="px-3 py-2 text-sm border border-piedra/30 rounded-lg outline-hidden focus:border-cielo bg-white text-carbon font-semibold text-center"
+                                        value={cardCvv}
+                                        onChange={handleCvvChange}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="border-t border-piedra/10 pt-4 mt-2 flex justify-between items-center">
+                                <div className="flex flex-col text-left">
+                                    <span className="text-[10px] font-bold text-piedra uppercase">Total a pagar:</span>
+                                    <span className="text-lg font-black text-estepa">
+                                        ${selectedFuncion ? (selectedSeats.length * selectedFuncion.precioPorAsiento).toFixed(2) : "0.00"}
+                                    </span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={isProcessingPayment}
+                                        onClick={() => setShowPaymentModal(false)}
+                                        className="bg-transparent border border-piedra/30 text-piedra hover:text-carbon hover:bg-carbon/5 px-4 py-2.5 rounded-lg font-bold text-xs cursor-pointer transition-all disabled:opacity-50"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isProcessingPayment}
+                                        className="bg-estepa hover:bg-estepa/90 text-white font-extrabold text-xs px-6 py-2.5 rounded-lg transition uppercase tracking-wider cursor-pointer shadow-sm shadow-estepa/10 disabled:opacity-50"
+                                    >
+                                        Pagar y Reservar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

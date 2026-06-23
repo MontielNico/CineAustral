@@ -42,6 +42,7 @@ public class PeliculaService {
                 .puntuacion(request.getPuntuacion())
                 .imagenUrl(imagenUrl)
                 .enCartelera(request.getEnCartelera() != null ? request.getEnCartelera() : true)
+                .clasificacion(request.getClasificacion())
                 .build();
         return toResponse(peliculaRepository.save(pelicula));
     }
@@ -55,6 +56,7 @@ public class PeliculaService {
         pelicula.setSinopsis(request.getSinopsis());
         pelicula.setDuracionMinutos(request.getDuracionMinutos());
         pelicula.setPuntuacion(request.getPuntuacion());
+        pelicula.setClasificacion(request.getClasificacion());
         if (request.getEnCartelera() != null) {
             pelicula.setEnCartelera(request.getEnCartelera());
         }
@@ -79,7 +81,8 @@ public class PeliculaService {
                 pelicula.getDuracionMinutos(),
                 pelicula.getPuntuacion(),
                 pelicula.getImagenUrl(),
-                pelicula.isEnCartelera()
+                pelicula.isEnCartelera(),
+                pelicula.getClasificacion()
         );
     }
 }

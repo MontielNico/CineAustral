@@ -1,14 +1,14 @@
-import { DollarSign, Ticket, Film, Wrench, Calendar, Check, Pencil, LockKeyhole } from "lucide-react";
+import { DollarSign, Ticket, Film, Wrench, Calendar, Check, Pencil, LockKeyhole, X, AlertTriangle } from "lucide-react";
 
 const OverviewTab = ({ peliculas, salas, reservas }) => {
     // --- ANALYTICS COMPUTATIONS ---
     const getDashboardStats = () => {
         const totalIngresos = reservas
-            .filter(r => r.estado === "CONFIRMADA")
+            .filter(r => r.estado === "CONFIRMADA" || r.estado === "MODIFICADA")
             .reduce((sum, r) => sum + r.precioTotal, 0);
 
         const totalVentasCount = reservas
-            .filter(r => r.estado === "CONFIRMADA")
+            .filter(r => r.estado === "CONFIRMADA" || r.estado === "MODIFICADA")
             .reduce((sum, r) => sum + r.asientos.length, 0);
 
         const pelisCarteleraCount = peliculas.filter(p => p.enCartelera).length;
@@ -31,31 +31,51 @@ const OverviewTab = ({ peliculas, salas, reservas }) => {
 
     const stats = getDashboardStats();
 
-    // Chart Helper: get sales trends for the last 7 days
+    // Chart Helper: get sales trends for the last 7 days based on real bookings
     const getDailySalesTrend = () => {
-        return [
-            { label: "Vie", value: 12000 },
-            { label: "Sáb", value: 25000 },
-            { label: "Dom", value: 22000 },
-            { label: "Lun", value: 8000 },
-            { label: "Mar", value: 9500 },
-            { label: "Mié", value: 14000 },
-            { label: "Jue", value: stats.totalIngresos || 18500 }
-        ];
+        const days = [];
+        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+        
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            const dateStr = `${yyyy}-${mm}-${dd}`;
+            
+            days.push({
+                dateString: dateStr,
+                label: dayNames[d.getDay()],
+                value: 0
+            });
+        }
+        
+        reservas.forEach(r => {
+            if ((r.estado === "CONFIRMADA" || r.estado === "MODIFICADA") && r.fechaCreacion) {
+                const rDate = r.fechaCreacion.split(" ")[0]; // "yyyy-MM-dd"
+                const match = days.find(day => day.dateString === rDate);
+                if (match) {
+                    match.value += r.precioTotal || 0;
+                }
+            }
+        });
+        
+        return days;
     };
 
     const salesTrend = getDailySalesTrend();
     const maxSalesVal = Math.max(...salesTrend.map(s => s.value), 5000);
 
-    // Dynamic popularity calculated from active bookings
+    // Dynamic popularity calculated from active bookings (No mock fallbacks)
     const getPopularMovies = () => {
         const pop = peliculas.map(p => {
             const count = reservas
-                .filter(r => r.peliculaTitulo === p.titulo && r.estado === "CONFIRMADA")
+                .filter(r => r.peliculaTitulo === p.titulo && (r.estado === "CONFIRMADA" || r.estado === "MODIFICADA"))
                 .reduce((sum, r) => sum + r.asientos.length, 0);
             return {
                 titulo: p.titulo,
-                tickets: count || Math.floor(Math.random() * 15) + 5
+                tickets: count
             };
         });
         return pop.sort((a, b) => b.tickets - a.tickets).slice(0, 4);
@@ -63,6 +83,81 @@ const OverviewTab = ({ peliculas, salas, reservas }) => {
 
     const popularMoviesList = getPopularMovies();
     const maxPopularTickets = Math.max(...popularMoviesList.map(m => m.tickets), 1);
+
+    // Generate recent activities from real data
+    const getRecentActivity = () => {
+        const logs = [];
+        
+        // 1. Confirmations and Cancellations
+        reservas.forEach(r => {
+            const timeStr = r.fechaCreacion ? `El ${r.fechaCreacion}` : "Recientemente";
+            const timestamp = r.fechaCreacion ? new Date(r.fechaCreacion.replace(' ', 'T')).getTime() : 0;
+            
+            if (r.estado === "CONFIRMADA") {
+                logs.push({
+                    text: `Reserva #${r.id} confirmada por $${r.precioTotal.toLocaleString()} (${r.clienteNombre} ${r.clienteApellido})`,
+                    time: timeStr,
+                    badge: <Check className="w-4 h-4 text-estepa" />,
+                    timestamp: timestamp
+                });
+            } else if (r.estado === "MODIFICADA") {
+                logs.push({
+                    text: `Reserva #${r.id} modificada por el cliente (${r.clienteNombre} ${r.clienteApellido})`,
+                    time: timeStr,
+                    badge: <Pencil className="w-4 h-4 text-cielo" />,
+                    timestamp: timestamp
+                });
+            } else if (r.estado === "CANCELADA") {
+                logs.push({
+                    text: `Reserva #${r.id} cancelada por el cliente (${r.clienteNombre} ${r.clienteApellido})`,
+                    time: timeStr,
+                    badge: <X className="w-4 h-4 text-terracota" />,
+                    timestamp: timestamp
+                });
+            }
+        });
+        
+        // 2. Seats in maintenance
+        salas.forEach(s => {
+            s.asientos?.forEach(a => {
+                if (a.asientoEstado === "MANTENIMIENTO") {
+                    logs.push({
+                        text: `Asiento ${a.fila}-${a.numero} de '${s.nombre}' en MANTENIMIENTO`,
+                        time: "Estado actual",
+                        badge: <Wrench className="w-4 h-4 text-terracota" />,
+                        timestamp: 1 // Lower priority sorting
+                    });
+                }
+            });
+        });
+        
+        // 3. Closed/disabled rooms
+        salas.forEach(s => {
+            if (s.estado !== "DISPONIBLE") {
+                logs.push({
+                    text: `Sala '${s.nombre}' marcada como NO DISPONIBLE`,
+                    time: "Estado actual",
+                    badge: <AlertTriangle className="w-4 h-4 text-terracota" />,
+                    timestamp: 2
+                });
+            }
+        });
+        
+        const sorted = logs.sort((a, b) => b.timestamp - a.timestamp);
+        
+        if (sorted.length === 0) {
+            sorted.push({
+                text: "No se registra actividad reciente en el sistema",
+                time: "Ahora",
+                badge: <Calendar className="w-4 h-4 text-cielo" />,
+                timestamp: 0
+            });
+        }
+        
+        return sorted.slice(0, 5);
+    };
+
+    const recentActivitiesList = getRecentActivity();
 
     // Interactive circular gauge parameters
     const svgRadius = 24;
@@ -188,8 +283,12 @@ const OverviewTab = ({ peliculas, salas, reservas }) => {
                         <h4 className="font-extrabold text-sm text-carbon uppercase tracking-wider mb-4">Ocupación Promedio por Sala</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {salas.map(s => {
+                                const totalAsientosSala = s.asientos?.length || 48;
+                                const asientosReservados = reservas
+                                    .filter(r => r.salaNombre && r.salaNombre.toLowerCase().includes(s.nombre.toLowerCase()) && (r.estado === "CONFIRMADA" || r.estado === "MODIFICADA"))
+                                    .reduce((acc, curr) => acc + curr.asientos.length, 0);
                                 const occupancyPercent = s.estado === "DISPONIBLE"
-                                    ? Math.min(Math.round((reservas.filter(r => r.salaNombre.includes(s.nombre) && r.estado === "CONFIRMADA").reduce((acc, curr) => acc + curr.asientos.length, 0) / (s.asientos?.length || 48)) * 100) || 35, 100)
+                                    ? Math.min(Math.round((asientosReservados / totalAsientosSala) * 100) || 0, 100)
                                     : 0;
 
                                 return (
@@ -255,13 +354,7 @@ const OverviewTab = ({ peliculas, salas, reservas }) => {
                     <div className="bg-white border border-piedra/15 rounded-2xl p-5 text-left flex-1 flex flex-col">
                         <h4 className="font-extrabold text-sm text-carbon uppercase tracking-wider mb-4">Actividad Reciente</h4>
                         <div className="flex flex-col gap-3.5 flex-1">
-                            {[
-                                { text: "Nueva función programada para 'El Origen' en Sala Patagonia", time: "Hace 15 min", type: "info", badge: <Calendar className="w-4 h-4 text-cielo" /> },
-                                { text: "Asiento C-4 de Sala Patagonia cambiado a MANTENIMIENTO", time: "Hace 1 hora", type: "warning", badge: <Wrench className="w-4 h-4 text-terracota" /> },
-                                { text: "Reserva #RES-10027 confirmada por $5,000.00", time: "Hace 2 horas", type: "success", badge: <Check className="w-4 h-4 text-estepa" /> },
-                                { text: "Película 'Interestelar' editada correctamente", time: "Hace 1 día", type: "info", badge: <Pencil className="w-4 h-4 text-cielo" /> },
-                                { text: "El administrador Ignacio Nicolás inició sesión en el panel", time: "Hoy, 15:07", type: "auth", badge: <LockKeyhole className="w-4 h-4 text-estepa" /> }
-                            ].map((log, i) => (
+                            {recentActivitiesList.map((log, i) => (
                                 <div key={i} className="flex gap-3 text-xs leading-normal items-start">
                                     <span className="shrink-0 flex items-center justify-center p-1.5 bg-nieve rounded-lg border border-piedra/10">{log.badge}</span>
                                     <div className="flex-1">

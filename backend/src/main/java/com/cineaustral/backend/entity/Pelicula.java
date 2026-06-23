@@ -16,11 +16,14 @@ public class Pelicula {
     private String titulo;
 
     private String genero;
+
+    @Column(columnDefinition = "TEXT")
     private String sinopsis;
 
     @Column(nullable = false)
     private int duracionMinutos;
     private Double puntuacion;
+    private String clasificacion;
 
     @Column()
     private String imagenUrl;

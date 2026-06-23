@@ -22,9 +22,9 @@ const UsersTab = ({
             showNotification("Rol de usuario actualizado");
             fetchUsuarios();
         } catch (err) {
-            console.warn("API toggle role failed, simulating locally:", err);
-            setUsuarios(prev => prev.map(u => u.id === userId ? { ...u, rol: nuevoRol } : u));
-            showNotification("Rol de usuario modificado (Simulado)");
+            console.error("Error al actualizar rol de usuario:", err);
+            const msg = err.response?.data?.message || "No se pudo actualizar el rol del usuario.";
+            showNotification(msg, "error");
         }
     };
 

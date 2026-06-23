@@ -1,5 +1,5 @@
 package com.cineaustral.backend.enums;
 
 public enum ReservaEstado {
-    ACTIVA, CANCELADA, COMPLETADA
+    ACTIVA, CANCELADA, COMPLETADA, MODIFICADA
 }

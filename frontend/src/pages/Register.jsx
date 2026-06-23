@@ -31,17 +31,19 @@ const Register = () => {
     };
 
     return (
-        <div className="relative flex justify-center items-center min-h-screen w-full bg-linear-to-br from-nieve to-[#E4E8F0] overflow-hidden font-sans px-4">
-            {/* Elemento decorativo suave para simular la luz del cielo austral */}
-            <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-[radial-gradient(circle,rgba(74,144,191,0.15)_0%,transparent_70%)] pointer-events-none z-1"></div>
-            <div className="absolute inset-0 bg-gradient-to-b from-carbon/5 to-carbon/15 pointer-events-none z-2"></div>
+        <div 
+            className="relative flex justify-center items-center min-h-screen w-full overflow-hidden font-sans px-4 bg-cover bg-center bg-no-repeat"
+            style={{ backgroundImage: "url('/fondoLogin.png')" }}
+        >
+            {/* Dark blur overlay to give it a premium cinema feel and increase readability */}
+            <div className="absolute inset-0 bg-carbon/60 backdrop-blur-[3px] pointer-events-none z-1"></div>
             
-            <div className="relative z-10 w-full max-w-[480px] p-8 sm:p-10 bg-white border border-piedra/20 rounded-2xl shadow-lg shadow-carbon/5 hover:shadow-xl hover:shadow-carbon/10 hover:-translate-y-0.5 transition-all duration-300">
+            <div className="relative z-10 w-full max-w-[480px] p-8 sm:p-10 bg-white/95 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl shadow-carbon/40 hover:-translate-y-0.5 transition-all duration-300">
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-carbon">
                         CINE<span className="text-cielo">AUSTRAL</span>
                     </h1>
-                    <p className="text-piedra text-sm leading-relaxed">
+                    <p className="text-carbon/75 text-sm font-semibold leading-relaxed">
                         Crea una cuenta para comenzar a reservar tus entradas
                     </p>
                 </div>

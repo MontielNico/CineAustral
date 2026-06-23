@@ -6,6 +6,7 @@ import com.cineaustral.backend.dto.reserva.ReservaRequest;
 import com.cineaustral.backend.dto.reserva.ReservaResponse;
 import com.cineaustral.backend.entity.*;
 import com.cineaustral.backend.enums.AsientoEstado;
+import com.cineaustral.backend.enums.FuncionEstado;
 import com.cineaustral.backend.enums.ReservaEstado;
 import com.cineaustral.backend.repository.*;
 import jakarta.transaction.Transactional;
@@ -29,6 +30,9 @@ public class ReservaService {
 
     public List<AsientoDisponibleResponse> getAsientosDisponibles(Long funcionId, Long excluirReservaId) {
         Funcion funcion = funcionRepository.findById(funcionId).orElseThrow();
+        if (funcion.getEstado() == FuncionEstado.CANCELADA) {
+            throw new RuntimeException("La función ha sido cancelada");
+        }
 
         List<Asiento> todos = asientoRepository.findBySalaAndAsientoEstado(funcion.getSala(), AsientoEstado.DISPONIBLE);
 
@@ -70,6 +74,9 @@ public class ReservaService {
     @Transactional
     public ReservaResponse crearReserva(ReservaRequest request) {
         Funcion funcion = funcionRepository.findById(request.getFuncionId()).orElseThrow();
+        if (funcion.getEstado() == FuncionEstado.CANCELADA) {
+            throw new RuntimeException("La función ha sido cancelada");
+        }
 
         LocalDateTime ahora = LocalDateTime.now();
         if (funcion.getFechaHoraInicio().isBefore(ahora)) {
@@ -149,6 +156,10 @@ public class ReservaService {
             throw new RuntimeException("No se puede modificar una reserva cancelada");
         }
 
+        if (reserva.getReservaEstado() == ReservaEstado.MODIFICADA) {
+            throw new RuntimeException("No se puede modificar una reserva que ya ha sido modificada");
+        }
+
         if (reserva.getCliente() != null && !reserva.getCliente().getId().equals(request.getClienteId())) {
             throw new RuntimeException("No tienes permission para modificar esta reserva");
         }
@@ -161,6 +172,9 @@ public class ReservaService {
 
         Funcion nuevaFuncion = funcionRepository.findById(request.getFuncionId())
                 .orElseThrow(() -> new RuntimeException("Función no encontrada"));
+        if (nuevaFuncion.getEstado() == FuncionEstado.CANCELADA) {
+            throw new RuntimeException("La función de destino ha sido cancelada");
+        }
 
         if (!nuevaFuncion.getPelicula().getId().equals(reserva.getFuncion().getPelicula().getId())) {
             throw new RuntimeException("La nueva función debe ser de la misma película");
@@ -204,6 +218,8 @@ public class ReservaService {
                 .map(a -> new DetalleReserva(reserva, a))
                 .toList();
         reserva.getDetalles().addAll(nuevosDetalles);
+
+        reserva.setReservaEstado(ReservaEstado.MODIFICADA);
 
         Reserva guardada = reservaRepository.save(reserva);
         return reservaToResponse(guardada);

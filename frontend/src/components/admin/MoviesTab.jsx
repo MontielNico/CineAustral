@@ -33,7 +33,8 @@ const MoviesTab = ({
             duracionMinutos: parseInt(peliDuracion),
             genero: peliGenero || "General",
             puntuacion: parseFloat(peliPuntuacion || 5.0),
-            enCartelera: peliEnCartelera
+            enCartelera: peliEnCartelera,
+            clasificacion: peliClasificacion || "ATP"
         };
 
         const formData = new FormData();
@@ -62,17 +63,9 @@ const MoviesTab = ({
             // Re-fetch
             fetchPeliculas();
         } catch (err) {
-            console.warn("API save movie failed, simulating locally:", err);
-            // Simulate save locally
-            if (editingPeliId) {
-                setPeliculas(prev => prev.map(p => p.id === editingPeliId ? { ...p, ...requestData, descripcion: peliDescripcion, duracion: parseInt(peliDuracion), imagenUrl: peliImagenPreview || p.imagenUrl } : p));
-                showNotification("Película actualizada (Simulado)");
-            } else {
-                const newId = Math.max(...peliculas.map(p => p.id), 0) + 1;
-                setPeliculas(prev => [...prev, { id: newId, ...requestData, descripcion: peliDescripcion, duracion: parseInt(peliDuracion), clasificacion: peliClasificacion || "ATP", imagenUrl: peliImagenPreview || "" }]);
-                showNotification("Película agregada (Simulado)");
-            }
-            resetForm();
+            console.error("Error al guardar película:", err);
+            const msg = err.response?.data?.message || "No se pudo guardar la película.";
+            showNotification(msg, "error");
         }
     };
 
@@ -109,9 +102,9 @@ const MoviesTab = ({
             showNotification("Película eliminada correctamente");
             fetchPeliculas();
         } catch (err) {
-            console.warn("API delete movie failed, simulating locally:", err);
-            setPeliculas(prev => prev.filter(p => p.id !== id));
-            showNotification("Película eliminada (Simulado)");
+            console.error("Error al eliminar película:", err);
+            const msg = err.response?.data?.message || "No se pudo eliminar la película. Verifique que no tenga funciones programadas.";
+            showNotification(msg, "error");
         }
     };
 
@@ -130,16 +123,17 @@ const MoviesTab = ({
                     duracionMinutos: peli.duracion,
                     genero: peli.genero,
                     puntuacion: peli.puntuacion,
-                    enCartelera: updatedStatus 
+                    enCartelera: updatedStatus,
+                    clasificacion: peli.clasificacion || "ATP"
                 };
                 formData.append("pelicula", new Blob([JSON.stringify(updatedObj)], { type: "application/json" }));
                 await api.put(`/admin/peliculas/${peli.id}`, formData);
                 showNotification("Película actualizada");
                 fetchPeliculas();
             } catch (err2) {
-                console.warn("Failed standard status change API, simulating:", err2);
-                setPeliculas(prev => prev.map(p => p.id === peli.id ? { ...p, enCartelera: updatedStatus } : p));
-                showNotification(`Estado cambiado a ${updatedStatus ? "Cartelera" : "Archivado"} (Simulado)`);
+                console.error("Error al actualizar estado en cartelera:", err2);
+                const msg = err2.response?.data?.message || "No se pudo cambiar el estado de la película.";
+                showNotification(msg, "error");
             }
         }
     };
