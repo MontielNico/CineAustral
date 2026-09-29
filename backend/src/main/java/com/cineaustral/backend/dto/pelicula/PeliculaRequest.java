@@ -11,4 +11,7 @@ public class PeliculaRequest {
     private Double puntuacion;
     private Boolean enCartelera;
     private String clasificacion;
+    /** URL externa del poster (ej: de TMDB). Se descarga y guarda localmente si no se sube un archivo. */
+    private String imagenUrlExterna;
 }
+

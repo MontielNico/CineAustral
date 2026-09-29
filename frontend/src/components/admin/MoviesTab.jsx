@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Search, Clapperboard, X } from "lucide-react";
 import api from "../../api/axiosConfig";
 
 const MoviesTab = ({ 
@@ -19,11 +19,85 @@ const MoviesTab = ({
     const [peliEnCartelera, setPeliEnCartelera] = useState(true);
     const [peliImagen, setPeliImagen] = useState(null);
     const [peliImagenPreview, setPeliImagenPreview] = useState(null);
+    const [peliImagenUrlExterna, setPeliImagenUrlExterna] = useState(null);
     const [editingPeliId, setEditingPeliId] = useState(null);
 
     // Search and filter states
     const [movieSearch, setMovieSearch] = useState("");
     const [movieFilterClasificacion, setMovieFilterClasificacion] = useState("");
+
+    // TMDB search states
+    const [tmdbQuery, setTmdbQuery] = useState("");
+    const [tmdbResultados, setTmdbResultados] = useState([]);
+    const [tmdbLoading, setTmdbLoading] = useState(false);
+    const [tmdbOpen, setTmdbOpen] = useState(false);
+    const tmdbDebounceRef = useRef(null);
+    const tmdbContainerRef = useRef(null);
+
+    // Debounce TMDB search
+    useEffect(() => {
+        if (tmdbDebounceRef.current) clearTimeout(tmdbDebounceRef.current);
+        if (!tmdbQuery.trim() || tmdbQuery.length < 2) {
+            setTmdbResultados([]);
+            setTmdbOpen(false);
+            return;
+        }
+        tmdbDebounceRef.current = setTimeout(async () => {
+            setTmdbLoading(true);
+            try {
+                const res = await api.get(`/admin/tmdb/buscar?query=${encodeURIComponent(tmdbQuery)}`);
+                setTmdbResultados(res.data.slice(0, 8));
+                setTmdbOpen(true);
+            } catch (err) {
+                console.error("Error buscando en TMDB:", err);
+            } finally {
+                setTmdbLoading(false);
+            }
+        }, 400);
+        return () => clearTimeout(tmdbDebounceRef.current);
+    }, [tmdbQuery]);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClick = (e) => {
+            if (tmdbContainerRef.current && !tmdbContainerRef.current.contains(e.target)) {
+                setTmdbOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    // When a TMDB result is clicked, fetch full detail and autofill form
+    const handleSeleccionarTmdb = async (resultado) => {
+        setTmdbOpen(false);
+        setTmdbQuery(resultado.titulo);
+        try {
+            const res = await api.get(`/admin/tmdb/detalle/${resultado.id}`);
+            const d = res.data;
+            setPeliNombre(d.titulo || "");
+            setPeliDescripcion(d.sinopsis || "");
+            setPeliDuracion(d.duracionMinutos > 0 ? d.duracionMinutos.toString() : "");
+            setPeliGenero(d.genero || "");
+            setPeliPuntuacion(d.puntuacion ? d.puntuacion.toFixed(1) : "5.0");
+            if (d.posterUrl) {
+                setPeliImagenPreview(d.posterUrl);
+                setPeliImagenUrlExterna(d.posterUrl);
+                setPeliImagen(null);
+            }
+            showNotification(`"${d.titulo}" cargada desde TMDB ✓`);
+        } catch (err) {
+            console.error("Error obteniendo detalle de TMDB:", err);
+            showNotification("No se pudo obtener el detalle de la película", "error");
+        }
+    };
+
+    const limpiarBuscadorTmdb = () => {
+        setTmdbQuery("");
+        setTmdbResultados([]);
+        setTmdbOpen(false);
+    };
+
 
     const handlePeliSubmit = async (e) => {
         e.preventDefault();
@@ -34,7 +108,9 @@ const MoviesTab = ({
             genero: peliGenero || "General",
             puntuacion: parseFloat(peliPuntuacion || 5.0),
             enCartelera: peliEnCartelera,
-            clasificacion: peliClasificacion || "ATP"
+            clasificacion: peliClasificacion || "ATP",
+            // Si no se subió imagen manual pero hay poster de TMDB, se lo pasamos al backend
+            imagenUrlExterna: (!peliImagen && peliImagenUrlExterna) ? peliImagenUrlExterna : null
         };
 
         const formData = new FormData();
@@ -79,8 +155,11 @@ const MoviesTab = ({
         setPeliEnCartelera(true);
         setPeliImagen(null);
         setPeliImagenPreview(null);
+        setPeliImagenUrlExterna(null);
         setEditingPeliId(null);
+        limpiarBuscadorTmdb();
     };
+
 
     const handleEditPeli = (peli) => {
         setEditingPeliId(peli.id);
@@ -169,7 +248,58 @@ const MoviesTab = ({
                     <h3 className="font-black text-carbon text-sm tracking-wide uppercase">
                         {editingPeliId ? "✏️ Editar Película Seleccionada" : "✨ Registrar Nueva Película"}
                     </h3>
-                    
+
+                    {/* TMDB Search */}
+                    <div ref={tmdbContainerRef} className="relative">
+                        <label className="text-xs font-bold uppercase text-piedra tracking-wider flex items-center gap-1.5 mb-1.5">
+                            <Clapperboard className="w-3.5 h-3.5 text-cielo" />
+                            Buscar en TMDB (autocompletar)
+                        </label>
+                        <div className="relative flex items-center">
+                            <input
+                                type="text"
+                                placeholder="Escribí el nombre de la película..."
+                                className="w-full pl-8 pr-8 py-2 text-sm border border-cielo/40 rounded-lg outline-hidden focus:border-cielo bg-white text-carbon font-medium"
+                                value={tmdbQuery}
+                                onChange={e => setTmdbQuery(e.target.value)}
+                                onFocus={() => tmdbResultados.length > 0 && setTmdbOpen(true)}
+                            />
+                            <Search className="absolute left-2.5 text-cielo w-3.5 h-3.5" />
+                            {tmdbLoading && (
+                                <div className="absolute right-2.5 w-3.5 h-3.5 border-2 border-cielo border-t-transparent rounded-full animate-spin" />
+                            )}
+                            {tmdbQuery && !tmdbLoading && (
+                                <button type="button" onClick={limpiarBuscadorTmdb} className="absolute right-2.5 text-piedra hover:text-carbon cursor-pointer">
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Dropdown results */}
+                        {tmdbOpen && tmdbResultados.length > 0 && (
+                            <div className="absolute z-50 top-full mt-1 w-full bg-white border border-piedra/20 rounded-xl shadow-lg overflow-hidden">
+                                {tmdbResultados.map(r => (
+                                    <button
+                                        key={r.id}
+                                        type="button"
+                                        onClick={() => handleSeleccionarTmdb(r)}
+                                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-cielo/5 border-b border-piedra/5 last:border-0 text-left cursor-pointer transition"
+                                    >
+                                        {r.posterUrl ? (
+                                            <img src={r.posterUrl} alt={r.titulo} className="w-8 h-11 object-cover rounded shrink-0 bg-nieve" />
+                                        ) : (
+                                            <div className="w-8 h-11 bg-nieve rounded shrink-0 flex items-center justify-center text-lg">🎬</div>
+                                        )}
+                                        <div className="flex-1 overflow-hidden">
+                                            <p className="text-xs font-extrabold text-carbon truncate">{r.titulo}</p>
+                                            <p className="text-[10px] text-piedra font-semibold">{r.fechaLanzamiento?.substring(0, 4)} · ★ {r.puntuacion?.toFixed(1)}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
                             <label className="text-xs font-bold uppercase text-piedra tracking-wider">Título de la Película</label>

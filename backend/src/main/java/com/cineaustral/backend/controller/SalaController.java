@@ -25,5 +25,4 @@ public class SalaController {
     public ResponseEntity<SalaResponse> cambiarEstado(@PathVariable Long id, @RequestBody SalaEstadoRequest estado) {
         return ResponseEntity.ok(salaService.cambiarEstado(id, estado));
     }
-
 }

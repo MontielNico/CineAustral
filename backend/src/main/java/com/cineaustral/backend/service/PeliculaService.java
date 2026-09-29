@@ -31,8 +31,12 @@ public class PeliculaService {
 
     public PeliculaResponse registrarPelicula(PeliculaRequest request, MultipartFile imagen) throws IOException {
         String imagenUrl = null;
-        if(imagen != null && !imagen.isEmpty()) {
+        if (imagen != null && !imagen.isEmpty()) {
+            // Prioridad 1: archivo subido manualmente
             imagenUrl = imagenService.guardar(imagen);
+        } else if (request.getImagenUrlExterna() != null && !request.getImagenUrlExterna().isBlank()) {
+            // Prioridad 2: URL externa (poster de TMDB) → se descarga y guarda localmente
+            imagenUrl = imagenService.guardarDesdeUrl(request.getImagenUrlExterna());
         }
         Pelicula pelicula = Pelicula.builder()
                 .titulo(request.getTitulo())
@@ -60,9 +64,14 @@ public class PeliculaService {
         if (request.getEnCartelera() != null) {
             pelicula.setEnCartelera(request.getEnCartelera());
         }
-        if(imagen != null && !imagen.isEmpty()) {
+        if (imagen != null && !imagen.isEmpty()) {
+            // Prioridad 1: archivo subido manualmente
             imagenService.eliminar(pelicula.getImagenUrl());
             pelicula.setImagenUrl(imagenService.guardar(imagen));
+        } else if (request.getImagenUrlExterna() != null && !request.getImagenUrlExterna().isBlank()) {
+            // Prioridad 2: URL externa (poster de TMDB)
+            imagenService.eliminar(pelicula.getImagenUrl());
+            pelicula.setImagenUrl(imagenService.guardarDesdeUrl(request.getImagenUrlExterna()));
         }
         return toResponse(peliculaRepository.save(pelicula));
     }
