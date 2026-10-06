@@ -13,18 +13,7 @@ Tener instalada la aplicación **Docker Desktop** en la computadora y asegurarse
 
 ---
 
-### 🟢 Opción 1: Ejecución en 1 Clic con Scripts (Recomendado en Windows)
-
-Si copió la carpeta al disco local de la computadora:
-1. Haga doble clic en el archivo **`iniciar.bat`**.
-   * El script verificará Docker, cargará las imágenes si vino el archivo `.tar` en el pendrive y levantará los contenedores de forma desatendida.
-2. Una vez finalizado, abra su navegador en:  
-   👉 **[http://localhost:3000](http://localhost:3000)**
-3. Al terminar la evaluación, haga doble clic en **`detener.bat`** para apagar el sistema.
-
----
-
-### 🔵 Opción 2: Ejecución Manual desde Terminal (PowerShell / CMD / Linux)
+Ejecución Manual desde Terminal (PowerShell / CMD / Linux)
 
 #### Caso A: Si dispone del archivo `cineaustral-imagenes.tar` (Modo Offline / Pendrive)
 1. Abra una terminal en la carpeta donde copió el archivo `.tar` y cargue las imágenes:
@@ -50,7 +39,7 @@ Si copió la carpeta al disco local de la computadora:
 
 ---
 
-### ⏳ Tiempo de Espera en el Primer Arranque (Muy Importante)
+### ⏳ Tiempo de Espera en el Primer Arranque
 La base de datos **Oracle Database** requiere aproximadamente **30 a 45 segundos** en su primera inicialización para montar el PDB (`FREEPDB1`) y alcanzar el estado saludable (*healthy*).
 * El contenedor del backend Spring Boot **espera automáticamente** a que Oracle esté 100% listo antes de iniciar gracias al *healthcheck* configurado en `docker-compose.yml`.
 * Puede consultar el estado de los servicios en cualquier momento con:
