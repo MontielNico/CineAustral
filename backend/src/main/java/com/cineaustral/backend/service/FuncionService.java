@@ -21,6 +21,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class FuncionService {
 
     private final FuncionRepository funcionRepository;
@@ -46,6 +47,7 @@ public class FuncionService {
                 .orElseThrow(() -> new RuntimeException("Funcion no encontrada")));
     }
 
+    @Transactional
     public FuncionResponse registrarFuncion(FuncionRequest request){
         Pelicula pelicula = peliculaRepository.findById(request.getPeliculaId())
                 .orElseThrow(() -> new RuntimeException("Pelicula no encontrada"));
@@ -131,6 +133,10 @@ public class FuncionService {
     //-----------------Mapper--------------------------------------
     private FuncionResponse toResponse(Funcion funcion){
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy'T'HH:mm:ss");
+        String estado = funcion.getEstado().name();
+        if (funcion.getEstado() == FuncionEstado.ACTIVA && funcion.getFechaHoraFin().isBefore(LocalDateTime.now())) {
+            estado = "FINALIZADA";
+        }
         return  new FuncionResponse(
                 funcion.getId(),
                 funcion.getPelicula().getTitulo(),
@@ -139,7 +145,7 @@ public class FuncionService {
                 funcion.getFechaHoraFin().format(formatter),
                 funcion.getDuracionMinutos(),
                 funcion.getPrecioPorAsiento(),
-                funcion.getEstado().name()
+                estado
         );
     }
 }

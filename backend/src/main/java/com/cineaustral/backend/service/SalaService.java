@@ -16,9 +16,11 @@ import com.cineaustral.backend.entity.Reserva;
 import com.cineaustral.backend.repository.FuncionRepository;
 import com.cineaustral.backend.repository.ReservaRepository;
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class SalaService {
 
     private final SalaRepository salaRepository;
@@ -32,6 +34,7 @@ public class SalaService {
                 .toList();
     }
 
+    @Transactional
     public SalaResponse cambiarEstado(Long id, SalaEstadoRequest request){
         Sala sala = salaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Sala no encontrado"));

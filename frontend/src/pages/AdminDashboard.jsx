@@ -89,14 +89,8 @@ const AdminDashboard = () => {
             }));
             setPeliculas(mapped);
         } catch (err) {
-            console.warn("Error fetching movies, falling back to mock:", err);
-            setPeliculas([
-                { id: 1, titulo: "El Origen", descripcion: "Un prófugo de la justicia roba secretos a través del subconsciente de las personas.", duracion: 148, clasificacion: "+13", genero: "Ciencia Ficción", puntuacion: 8.8, enCartelera: true, imagenUrl: "" },
-                { id: 2, titulo: "Interestelar", descripcion: "Un grupo de científicos y exploradores viaja a través de un agujero de gusano para salvar la humanidad.", duracion: 169, clasificacion: "ATP", genero: "Drama / Aventura", puntuacion: 8.6, enCartelera: true, imagenUrl: "" },
-                { id: 3, titulo: "El Caballero de la Noche", descripcion: "Batman enfrenta al Guasón en una guerra psicológica y criminal por el alma de Ciudad Gótica.", duracion: 152, clasificacion: "+13", genero: "Acción", puntuacion: 9.0, enCartelera: true, imagenUrl: "" },
-                { id: 4, titulo: "Avatar: El Camino del Agua", descripcion: "Jake Sully vive con su nueva familia en el planeta de Pandora antes de que resurja una amenaza conocida.", duracion: 192, clasificacion: "ATP", genero: "Fantasía / Acción", puntuacion: 7.6, enCartelera: false, imagenUrl: "" },
-                { id: 5, titulo: "El Resplandor", descripcion: "Una familia se hospeda en un hotel solitario para pasar el invierno mientras fuerzas misteriosas acechan.", duracion: 146, clasificacion: "+18", genero: "Terror", puntuacion: 8.4, enCartelera: false, imagenUrl: "" }
-            ]);
+            console.error("Error fetching movies from API:", err);
+            setPeliculas([]);
         } finally {
             setLoadingPeliculas(false);
         }
@@ -114,7 +108,11 @@ const AdminDashboard = () => {
                 if (parts.length === 2) {
                     const dateParts = parts[0].split('-');
                     if (dateParts.length === 3) {
-                        fecha = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+                        if (dateParts[0].length === 4) {
+                            fecha = parts[0];
+                        } else {
+                            fecha = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+                        }
                     } else {
                         fecha = parts[0];
                     }
@@ -133,13 +131,8 @@ const AdminDashboard = () => {
             });
             setFunciones(mapped);
         } catch (err) {
-            console.warn("Error fetching shows, falling back to mock:", err);
-            setFunciones([
-                { id: 1, peliculaId: 1, peliculaTitulo: "El Origen", salaId: 1, salaNombre: "Sala Patagonia", fecha: "2026-06-19", hora: "19:00:00", precio: 2500.00 },
-                { id: 2, peliculaId: 2, peliculaTitulo: "Interestelar", salaId: 2, salaNombre: "Sala Tronador", fecha: "2026-06-20", hora: "21:30:00", precio: 3000.00 },
-                { id: 3, peliculaId: 3, peliculaTitulo: "El Caballero de la Noche", salaId: 1, salaNombre: "Sala Patagonia", fecha: "2026-06-21", hora: "16:00:00", precio: 2500.00 },
-                { id: 4, peliculaId: 1, peliculaTitulo: "El Origen", salaId: 3, salaNombre: "Sala Nahuel Huapi", fecha: "2026-06-19", hora: "22:00:00", precio: 2800.00 }
-            ]);
+            console.error("Error fetching shows from API:", err);
+            setFunciones([]);
         } finally {
             setLoadingFunciones(false);
         }
@@ -156,37 +149,8 @@ const AdminDashboard = () => {
                 if (updatedSala) setSelectedSala(updatedSala);
             }
         } catch (err) {
-            console.warn("Error fetching rooms, falling back to mock:", err);
-            
-            const generateMockSeats = (salaId) => {
-                const rows = ["A", "B", "C", "D", "E", "F"];
-                const seats = [];
-                let idCounter = salaId * 100;
-                rows.forEach(r => {
-                    for (let n = 1; n <= 18; n++) {
-                        if (r === "A" && (n < 3 || n > 16)) continue;
-                        seats.push({
-                            id: idCounter++,
-                            fila: r,
-                            numero: n,
-                            asientoEstado: (r === "F" && n === 10) || (r === "C" && n === 4) ? "MANTENIMIENTO" : "DISPONIBLE"
-                        });
-                    }
-                });
-                return seats;
-            };
-
-            const mockSalas = [
-                { id: 1, nombre: "Sala Patagonia (3D)", estado: "DISPONIBLE", asientos: generateMockSeats(1) },
-                { id: 2, nombre: "Sala Tronador (VIP)", estado: "DISPONIBLE", asientos: generateMockSeats(2) },
-                { id: 3, nombre: "Sala Nahuel Huapi (2D)", estado: "NO_DISPONIBLE", asientos: generateMockSeats(3) }
-            ];
-            
-            setSalas(mockSalas);
-            if (selectedSala) {
-                const updatedSala = mockSalas.find(s => s.id === selectedSala.id);
-                if (updatedSala) setSelectedSala(updatedSala);
-            }
+            console.error("Error fetching rooms from API:", err);
+            setSalas([]);
         } finally {
             setLoadingSalas(false);
         }
@@ -218,14 +182,8 @@ const AdminDashboard = () => {
             });
             setReservas(mapped);
         } catch (err) {
-            console.warn("Could not fetch reservations, falling back to mock:", err);
-            setReservas([
-                { id: "RES-10024", clienteNombre: "Ignacio Nicolás", clienteApellido: "Montiel Ruiz", clienteEmail: "admin@cineaustral.com", peliculaTitulo: "El Origen", salaNombre: "Sala Patagonia (3D)", fecha: "2026-06-19", hora: "19:00", asientos: [{ fila: "B", numero: 7 }, { fila: "B", numero: 8 }], precioTotal: 5000.00, estado: "CONFIRMADA", fechaCreacion: "2026-06-18 10:15" },
-                { id: "RES-10025", clienteNombre: "Juan", clienteApellido: "Pérez", clienteEmail: "juan.perez@gmail.com", peliculaTitulo: "El Origen", salaNombre: "Sala Patagonia (3D)", fecha: "2026-06-19", hora: "19:00", asientos: [{ fila: "C", numero: 10 }], precioTotal: 2500.00, estado: "CONFIRMADA", fechaCreacion: "2026-06-18 11:30" },
-                { id: "RES-10026", clienteNombre: "María", clienteApellido: "López", clienteEmail: "maria.lopez@gmail.com", peliculaTitulo: "Interestelar", salaNombre: "Sala Tronador (VIP)", fecha: "2026-06-20", hora: "21:30", asientos: [{ fila: "D", numero: 5 }, { fila: "D", numero: 6 }], precioTotal: 6000.00, estado: "CANCELADA", fechaCreacion: "2026-06-17 14:20" },
-                { id: "RES-10027", clienteNombre: "Ana", clienteApellido: "Gómez", clienteEmail: "ana.gomez@hotmail.com", peliculaTitulo: "El Origen", salaNombre: "Sala Patagonia (3D)", fecha: "2026-06-19", hora: "19:00", asientos: [{ fila: "A", numero: 3 }, { fila: "A", numero: 4 }], precioTotal: 5000.00, estado: "CONFIRMADA", fechaCreacion: "2026-06-18 13:45" },
-                { id: "RES-10028", clienteNombre: "Carlos", clienteApellido: "Sánchez", clienteEmail: "carlos.sanchez@gmail.com", peliculaTitulo: "El Caballero de la Noche", salaNombre: "Sala Patagonia (3D)", fecha: "2026-06-21", hora: "16:00", asientos: [{ fila: "D", numero: 11 }, { fila: "D", numero: 12 }], precioTotal: 5000.00, estado: "CONFIRMADA", fechaCreacion: "2026-06-18 08:30" }
-            ]);
+            console.error("Could not fetch reservations from API:", err);
+            setReservas([]);
         } finally {
             setLoadingReservas(false);
         }
@@ -238,14 +196,8 @@ const AdminDashboard = () => {
             const res = await api.get("/admin/usuarios");
             setUsuarios(res.data);
         } catch (err) {
-            console.warn("Error fetching users, falling back to mock:", err);
-            setUsuarios([
-                { id: 1, nombre: "Ignacio Nicolás", apellido: "Montiel Ruiz", email: "admin@cineaustral.com", rol: "ADMIN", fechaRegistro: "2026-01-10" },
-                { id: 2, nombre: "Juan", apellido: "Pérez", email: "juan.perez@gmail.com", rol: "CLIENTE", fechaRegistro: "2026-03-15" },
-                { id: 3, nombre: "María", apellido: "López", email: "maria.lopez@gmail.com", rol: "CLIENTE", fechaRegistro: "2026-04-20" },
-                { id: 4, nombre: "Carlos", apellido: "Sánchez", email: "carlos.sanchez@gmail.com", rol: "CLIENTE", fechaRegistro: "2026-05-02" },
-                { id: 5, nombre: "Ana", apellido: "Gómez", email: "ana.gomez@hotmail.com", rol: "CLIENTE", fechaRegistro: "2026-06-01" },
-            ]);
+            console.error("Error fetching users from API:", err);
+            setUsuarios([]);
         } finally {
             setLoadingUsuarios(false);
         }

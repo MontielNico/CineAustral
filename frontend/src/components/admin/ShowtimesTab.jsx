@@ -260,15 +260,32 @@ const ShowtimesTab = ({
                                         <td className="p-3.5 font-semibold text-carbon">{formatFechaLegible(f.fecha)} - {f.hora.substring(0, 5)} hs</td>
                                         <td className="p-3.5 text-right font-bold text-estepa">${f.precio.toFixed(2)}</td>
                                         <td className="p-3.5 text-center">
-                                            {f.estado === "CANCELADA" ? (
-                                                <span className="font-extrabold text-terracota bg-terracota/10 border border-terracota/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
-                                                    Cancelada
-                                                </span>
-                                            ) : (
-                                                <span className="font-extrabold text-estepa bg-estepa/10 border border-estepa/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
-                                                    Activa
-                                                </span>
-                                            )}
+                                            {(() => {
+                                                const showtimeStart = new Date(`${f.fecha}T${f.hora.substring(0, 5)}:00`).getTime();
+                                                const durationMs = (f.duracionMinutos || 120) * 60 * 1000;
+                                                const now = Date.now();
+                                                const isPast = !isNaN(showtimeStart) && (now > (showtimeStart + durationMs));
+
+                                                if (f.estado === "CANCELADA") {
+                                                    return (
+                                                        <span className="font-extrabold text-terracota bg-terracota/10 border border-terracota/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                                                            Cancelada
+                                                        </span>
+                                                    );
+                                                }
+                                                if (f.estado === "FINALIZADA" || isPast) {
+                                                    return (
+                                                        <span className="font-extrabold text-piedra bg-piedra/10 border border-piedra/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                                                            Finalizada
+                                                        </span>
+                                                    );
+                                                }
+                                                return (
+                                                    <span className="font-extrabold text-estepa bg-estepa/10 border border-estepa/20 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                                                        Activa
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="p-3.5 text-center">
                                             <span className="font-bold text-carbon bg-nieve border border-piedra/15 px-2 py-0.5 rounded text-[10px]">
@@ -276,11 +293,19 @@ const ShowtimesTab = ({
                                             </span>
                                         </td>
                                         <td className="p-3.5 text-center">
-                                            {f.estado === "CANCELADA" ? (
-                                                <span className="text-piedra/40 font-semibold italic text-[11px]">Cancelada</span>
-                                            ) : (() => {
+                                            {(() => {
                                                 const showtimeStart = new Date(`${f.fecha}T${f.hora.substring(0, 5)}:00`).getTime();
-                                                const hasStarted = new Date().getTime() >= showtimeStart;
+                                                const durationMs = (f.duracionMinutos || 120) * 60 * 1000;
+                                                const now = Date.now();
+                                                const isPast = !isNaN(showtimeStart) && (now > (showtimeStart + durationMs));
+                                                const hasStarted = !isNaN(showtimeStart) && (now >= showtimeStart);
+
+                                                if (f.estado === "CANCELADA") {
+                                                    return <span className="text-piedra/40 font-semibold italic text-[11px]">Cancelada</span>;
+                                                }
+                                                if (f.estado === "FINALIZADA" || isPast) {
+                                                    return <span className="text-piedra/40 font-semibold italic text-[11px]">Finalizada</span>;
+                                                }
                                                 return (
                                                     <button
                                                         disabled={hasStarted}

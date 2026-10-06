@@ -17,7 +17,8 @@ public class Pelicula {
 
     private String genero;
 
-    @Column(columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "sinopsis")
     private String sinopsis;
 
     @Column(nullable = false)

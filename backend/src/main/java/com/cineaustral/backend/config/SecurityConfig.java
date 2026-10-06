@@ -42,7 +42,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/register", "/ping").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/peliculas").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/peliculas", "/api/peliculas/**", "/api/funciones/**", "/api/reservas/disponibles/**").permitAll()
                         .requestMatchers("/uploads/imagenes/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()

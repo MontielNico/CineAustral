@@ -173,61 +173,6 @@ const Home = () => {
         }
     };
 
-    // Fetch listings when views change
-    useEffect(() => {
-        if (currentView === "cartelera") {
-            fetchPeliculas();
-            setSelectedPelicula(null);
-            setSelectedFuncion(null);
-            setSelectedSeats([]);
-            setReservaParaModificar(null);
-        } else if (currentView === "reservas") {
-            fetchReservas();
-            setReservaParaModificar(null);
-        }
-    }, [currentView]);
-
-    // Update visible items count based on window width
-    useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth < 640) {
-                setVisibleCount(1);
-            } else if (window.innerWidth < 1024) {
-                setVisibleCount(2);
-            } else if (window.innerWidth < 1280) {
-                setVisibleCount(3);
-            } else {
-                setVisibleCount(4);
-            }
-        };
-
-        handleResize();
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    // Reset index if visibleCount or peliculas length changes
-    useEffect(() => {
-        setCurrentSlideIndex((prev) => {
-            const maxIndex = Math.max(0, peliculas.length - visibleCount);
-            return prev > maxIndex ? maxIndex : prev;
-        });
-    }, [visibleCount, peliculas]);
-
-    const handlePrevSlide = () => {
-        setCurrentSlideIndex((prev) => Math.max(0, prev - 1));
-    };
-
-    const handleNextSlide = () => {
-        setCurrentSlideIndex((prev) => {
-            const maxIndex = Math.max(0, peliculas.length - visibleCount);
-            return Math.min(maxIndex, prev + 1);
-        });
-    };
-
-    const maxSlideIndex = Math.max(0, peliculas.length - visibleCount);
-    const showArrows = peliculas.length > visibleCount;
-
     const fetchPeliculas = async () => {
         setLoadingPeliculas(true);
         try {
@@ -288,6 +233,83 @@ const Home = () => {
             setLoadingAsientos(false);
         }
     };
+
+    // Fetch listings when views change & restore pending booking from unauthenticated landing
+    useEffect(() => {
+        if (currentView === "cartelera") {
+            fetchPeliculas();
+
+            const pendingStr = sessionStorage.getItem("pendingBooking") || localStorage.getItem("pendingBooking");
+            if (pendingStr) {
+                try {
+                    sessionStorage.removeItem("pendingBooking");
+                    localStorage.removeItem("pendingBooking");
+                    const pending = JSON.parse(pendingStr);
+                    if (pending.pelicula && pending.funcion) {
+                        setSelectedPelicula(pending.pelicula);
+                        handleSelectFuncion(pending.funcion);
+                        // Also prefetch the functions for this movie so "Volver a Horarios" button has them ready
+                        api.get(`/api/funciones/pelicula/${pending.pelicula.id}`)
+                            .then(res => setFunciones(res.data))
+                            .catch(err => console.error("Error al precargar funciones:", err));
+                        showNotification(`¡Bienvenido! Continuando con tu reserva para "${pending.pelicula.titulo}"`);
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Error al restaurar reserva pendiente:", e);
+                }
+            }
+
+            setSelectedPelicula(null);
+            setSelectedFuncion(null);
+            setSelectedSeats([]);
+            setReservaParaModificar(null);
+        } else if (currentView === "reservas") {
+            fetchReservas();
+            setReservaParaModificar(null);
+        }
+    }, [currentView]);
+
+    // Update visible items count based on window width
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 640) {
+                setVisibleCount(1);
+            } else if (window.innerWidth < 1024) {
+                setVisibleCount(2);
+            } else if (window.innerWidth < 1280) {
+                setVisibleCount(3);
+            } else {
+                setVisibleCount(4);
+            }
+        };
+
+        handleResize();
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    // Reset index if visibleCount or peliculas length changes
+    useEffect(() => {
+        setCurrentSlideIndex((prev) => {
+            const maxIndex = Math.max(0, peliculas.length - visibleCount);
+            return prev > maxIndex ? maxIndex : prev;
+        });
+    }, [visibleCount, peliculas]);
+
+    const handlePrevSlide = () => {
+        setCurrentSlideIndex((prev) => Math.max(0, prev - 1));
+    };
+
+    const handleNextSlide = () => {
+        setCurrentSlideIndex((prev) => {
+            const maxIndex = Math.max(0, peliculas.length - visibleCount);
+            return Math.min(maxIndex, prev + 1);
+        });
+    };
+
+    const maxSlideIndex = Math.max(0, peliculas.length - visibleCount);
+    const showArrows = peliculas.length > visibleCount;
 
     const handleCancelarReserva = async (reservaId) => {
         const reserva = reservas.find(r => r.id === reservaId);
@@ -728,7 +750,7 @@ const Home = () => {
                                 <div className="flex-1 flex flex-col gap-6">
                                     <div>
                                         <h3 className="text-xl font-extrabold text-carbon">Selecciona tus Asientos</h3>
-                                        <p className="text-sm text-piedra font-semibold">{selectedPelicula.titulo} — {formatFecha(selectedFuncion.fechaHoraInicio)} ({selectedFuncion.salaNombre})</p>
+                                        <p className="text-sm text-piedra font-semibold">{selectedPelicula.titulo} — {formatFecha(selectedFuncion.fechaHoraInicio)} ({selectedFuncion.sala || selectedFuncion.salaNombre})</p>
                                     </div>
 
                                     {/* Curved Screen element */}
@@ -838,7 +860,7 @@ const Home = () => {
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>Sala:</span>
-                                                <strong className="text-carbon">{selectedFuncion.salaNombre}</strong>
+                                                <strong className="text-carbon">{selectedFuncion.sala || selectedFuncion.salaNombre}</strong>
                                             </div>
                                             <div className="flex justify-between flex-wrap gap-2">
                                                 <span>Asiento(s) seleccionado(s):</span>
@@ -1063,7 +1085,7 @@ const Home = () => {
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-2 text-xs text-piedra font-semibold">
-                                                            <span>Room: <strong className="text-carbon">{f.salaNombre}</strong></span>
+                                                            <span>Sala: <strong className="text-carbon">{f.sala || f.salaNombre}</strong></span>
                                                             <span>•</span>
                                                             <span>Precio: <strong className="text-estepa">${f.precioPorAsiento}</strong></span>
                                                         </div>
@@ -1222,7 +1244,7 @@ const Home = () => {
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>Sala Nueva:</span>
-                                                <strong className="text-carbon">{selectedFuncion.salaNombre}</strong>
+                                                <strong className="text-carbon">{selectedFuncion.sala || selectedFuncion.salaNombre}</strong>
                                             </div>
                                             <div className="flex justify-between flex-wrap gap-2">
                                                 <span>Nuevos Asientos:</span>

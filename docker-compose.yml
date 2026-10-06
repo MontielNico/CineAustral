@@ -1,0 +1,55 @@
+services:
+  oracle-db:
+    image: gvenzl/oracle-free:latest
+    container_name: cineaustral-oracle
+    ports:
+      - "1521:1521"
+    environment:
+      - ORACLE_PASSWORD=1234
+      - APP_USER=cineaustral
+      - APP_USER_PASSWORD=1234
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 25
+      start_period: 30s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cineaustral-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_URL=jdbc:oracle:thin:@oracle-db:1521/FREEPDB1
+      - DB_USER=cineaustral
+      - DB_PASSWORD=1234
+      - CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:3000,http://localhost:5173
+      - TZ=America/Argentina/Buenos_Aires
+      - JAVA_TOOL_OPTIONS=-Duser.timezone=America/Argentina/Buenos_Aires
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cineaustral-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  oracle_data:
+  backend_uploads:

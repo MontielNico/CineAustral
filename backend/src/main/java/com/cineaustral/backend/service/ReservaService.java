@@ -9,7 +9,7 @@ import com.cineaustral.backend.enums.AsientoEstado;
 import com.cineaustral.backend.enums.FuncionEstado;
 import com.cineaustral.backend.enums.ReservaEstado;
 import com.cineaustral.backend.repository.*;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ReservaService {
 
     private final FuncionRepository funcionRepository;

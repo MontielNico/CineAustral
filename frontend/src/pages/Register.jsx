@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Register = () => {
@@ -11,11 +11,35 @@ const Register = () => {
     const [submitting, setSubmitting] = useState(false);
     const { register } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const [pendingInfo, setPendingInfo] = useState(() => {
+        if (location.state?.fromBooking && (sessionStorage.getItem("pendingBooking") || localStorage.getItem("pendingBooking"))) {
+            return {
+                movieTitle: location.state.movieTitle,
+                funcionInfo: location.state.funcionInfo
+            };
+        }
+        sessionStorage.removeItem("pendingBooking");
+        localStorage.removeItem("pendingBooking");
+        return null;
+    });
+
+    const handleDescartarReserva = () => {
+        sessionStorage.removeItem("pendingBooking");
+        localStorage.removeItem("pendingBooking");
+        setPendingInfo(null);
+        navigate(location.pathname, { replace: true, state: {} });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
         setSubmitting(true);
+        if (!pendingInfo) {
+            sessionStorage.removeItem("pendingBooking");
+            localStorage.removeItem("pendingBooking");
+        }
         try {
             await register(nombre, apellido, email, password);
             navigate("/");
@@ -39,14 +63,48 @@ const Register = () => {
             <div className="absolute inset-0 bg-carbon/60 backdrop-blur-[3px] pointer-events-none z-1"></div>
             
             <div className="relative z-10 w-full max-w-[480px] p-8 sm:p-10 bg-white/95 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl shadow-carbon/40 hover:-translate-y-0.5 transition-all duration-300">
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-carbon">
-                        CINE<span className="text-cielo">AUSTRAL</span>
-                    </h1>
+                <div className="text-center mb-6">
+                    <Link 
+                        to="/" 
+                        onClick={() => {
+                            sessionStorage.removeItem("pendingBooking");
+                            localStorage.removeItem("pendingBooking");
+                        }}
+                        className="inline-block cursor-pointer hover:opacity-90 transition-opacity"
+                    >
+                        <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-carbon">
+                            CINE<span className="text-cielo">AUSTRAL</span>
+                        </h1>
+                    </Link>
                     <p className="text-carbon/75 text-sm font-semibold leading-relaxed">
                         Crea una cuenta para comenzar a reservar tus entradas
                     </p>
                 </div>
+
+                {pendingInfo?.movieTitle && (
+                    <div className="bg-cielo/10 border border-cielo/30 rounded-xl p-3.5 mb-5 text-left flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                            <span className="text-2xl">🎟️</span>
+                            <div className="text-xs">
+                                <span className="font-extrabold text-carbon block text-sm">
+                                    ¡Creá tu cuenta para completar tu reserva!
+                                </span>
+                                <span className="text-carbon/80 mt-0.5 block leading-relaxed">
+                                    Al registrarte ingresarás directamente a elegir tus asientos para <strong className="text-carbon">{pendingInfo.movieTitle}</strong>
+                                    {pendingInfo.funcionInfo ? ` (${pendingInfo.funcionInfo})` : ""}.
+                                </span>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleDescartarReserva}
+                            className="text-piedra hover:text-terracota text-xs font-bold shrink-0 underline cursor-pointer ml-2"
+                            title="Descartar esta reserva y crear cuenta normalmente"
+                        >
+                            Descartar
+                        </button>
+                    </div>
+                )}
 
                 {error && (
                     <div className="bg-terracota/8 border border-terracota/30 text-terracota text-sm px-4 py-3 rounded-lg mb-5 text-left font-medium leading-relaxed">
@@ -133,7 +191,11 @@ const Register = () => {
 
                 <div className="mt-6 text-center text-sm text-piedra">
                     ¿Ya tienes una cuenta?{" "}
-                    <Link to="/login" className="text-lago font-bold hover:text-cielo hover:underline transition-colors duration-200">
+                    <Link 
+                        to="/login" 
+                        state={pendingInfo ? location.state : {}} 
+                        className="text-lago font-bold hover:text-cielo hover:underline transition-colors duration-200"
+                    >
                         Inicia sesión aquí
                     </Link>
                 </div>

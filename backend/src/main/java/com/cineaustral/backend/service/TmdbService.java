@@ -2,8 +2,8 @@ package com.cineaustral.backend.service;
 
 import com.cineaustral.backend.dto.tmdb.TmdbBusquedaResult;
 import com.cineaustral.backend.dto.tmdb.TmdbDetalleResponse;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -44,14 +44,14 @@ public class TmdbService {
 
             List<TmdbBusquedaResult> lista = new ArrayList<>();
             for (JsonNode node : results) {
-                String posterPath = node.path("poster_path").asText(null);
+                String posterPath = node.path("poster_path").asString(null);
                 lista.add(new TmdbBusquedaResult(
                         node.path("id").asInt(),
-                        node.path("title").asText(""),
-                        node.path("overview").asText(""),
+                        node.path("title").asString(""),
+                        node.path("overview").asString(""),
                         posterPath != null ? IMAGE_BASE_URL + posterPath : null,
                         node.path("vote_average").asDouble(0.0),
-                        node.path("release_date").asText("")
+                        node.path("release_date").asString("")
                 ));
             }
             return lista;
@@ -77,15 +77,15 @@ public class TmdbService {
 
             // Unir géneros con " / "
             String generos = StreamSupport.stream(node.path("genres").spliterator(), false)
-                    .map(g -> g.path("name").asText())
+                    .map(g -> g.path("name").asString())
                     .collect(Collectors.joining(" / "));
 
-            String posterPath = node.path("poster_path").asText(null);
+            String posterPath = node.path("poster_path").asString(null);
 
             return new TmdbDetalleResponse(
                     node.path("id").asInt(),
-                    node.path("title").asText(""),
-                    node.path("overview").asText(""),
+                    node.path("title").asString(""),
+                    node.path("overview").asString(""),
                     posterPath != null ? IMAGE_BASE_URL + posterPath : null,
                     node.path("vote_average").asDouble(0.0),
                     node.path("runtime").asInt(0),
