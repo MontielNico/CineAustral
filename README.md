@@ -46,7 +46,7 @@ El sistema está completamente contenedorizado con **Docker Compose**, lo que pe
 
 - **Docker y Docker Compose v2** instalados:
   - En **Linux:** Docker Engine + Docker Compose Plugin (`docker compose version`).
-  - En **Windows / macOS:** Docker Desktop en ejecución (ícono de la ballena verde activo).
+  - En **Windows / macOS:** Descargar [Docker Desktop](https://www.docker.com/products/docker-desktop/) y asegurarse de que se encuentre en ejecución (ícono de la ballena verde activo).
 - Puertos disponibles en la máquina anfitriona: `3000` (Frontend), `8080` (Backend API) y `1521` (Oracle DB).
 
 ---
